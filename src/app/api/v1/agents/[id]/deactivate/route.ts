@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@/lib/database/supabase-server";
+import { fromUntypedTable } from "@/lib/database/untyped-table";
 import { z } from "zod";
 
 const deactivateSchema = z.object({
@@ -50,8 +51,7 @@ export async function POST(
     }
 
     // Update agent status
-    const { error: agentError } = await supabase
-      .from("agents" as any)
+    const { error: agentError } = await fromUntypedTable(supabase, "agents")
       .update({ status: "inactive" })
       .eq("id", id)
       .eq("tenant_id", tenant_id);

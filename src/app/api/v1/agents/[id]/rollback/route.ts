@@ -1,6 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@/lib/database/supabase-server";
+import { fromUntypedTable } from "@/lib/database/untyped-table";
 import { z } from "zod";
+
+type AgentVersionRow = {
+  id: string;
+  version: number;
+  config: unknown;
+  config_hash: string;
+};
 
 const rollbackSchema = z.object({
   tenant_id: z.string().uuid(),
@@ -51,8 +59,7 @@ export async function POST(
     }
 
     // Verify agent belongs to tenant
-    const { data: agent } = await supabase
-      .from("agents" as any)
+    const { data: agent } = await fromUntypedTable(supabase, "agents")
       .select("id")
       .eq("id", id)
       .eq("tenant_id", tenant_id)
@@ -66,12 +73,12 @@ export async function POST(
     }
 
     // Fetch the target version to rollback to
-    const { data: targetVersion } = (await supabase
-      .from("agent_versions" as any)
+    const { data: targetVersionData } = await fromUntypedTable(supabase, "agent_versions")
       .select("*")
       .eq("id", version_id)
       .eq("agent_id", id)
-      .single()) as { data: any };
+      .single();
+    const targetVersion = targetVersionData as AgentVersionRow | null;
 
     if (!targetVersion) {
       return NextResponse.json(
@@ -81,28 +88,27 @@ export async function POST(
     }
 
     // Determine next version number
-    const { data: latestVersion } = (await supabase
-      .from("agent_versions" as any)
+    const { data: latestVersionData } = await fromUntypedTable(supabase, "agent_versions")
       .select("version")
       .eq("agent_id", id)
       .order("version", { ascending: false })
       .limit(1)
-      .single()) as { data: any };
+      .single();
+    const latestVersion = latestVersionData as Pick<AgentVersionRow, "version"> | null;
 
-    const nextVersion = ((latestVersion as any)?.version || 0) + 1;
+    const nextVersion = (latestVersion?.version || 0) + 1;
 
     // Create a new version entry with the rolled-back config
-    const { data: newVersion, error: insertError } = (await supabase
-      .from("agent_versions" as any)
+    const { data: newVersion, error: insertError } = await fromUntypedTable(supabase, "agent_versions")
       .insert({
         agent_id: id,
         version: nextVersion,
-        config: (targetVersion as any).config,
-        config_hash: (targetVersion as any).config_hash,
+        config: targetVersion.config,
+        config_hash: targetVersion.config_hash,
         status: "active",
       })
       .select()
-      .single()) as { data: any; error: any };
+      .single();
 
     if (insertError) {
       return NextResponse.json(
@@ -120,7 +126,7 @@ export async function POST(
       resource_id: id,
       metadata: {
         rolled_back_to_version_id: version_id,
-        rolled_back_to_version: (targetVersion as any).version,
+        rolled_back_to_version: targetVersion.version,
         new_version: nextVersion,
       },
     });

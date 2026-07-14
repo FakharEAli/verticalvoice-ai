@@ -86,7 +86,7 @@ export async function POST(request: NextRequest) {
     // For now, we just create the record.
 
     // Log to audit_events
-    await supabase.from("audit_events" as any).insert({
+    await supabase.from("audit_events").insert({
       tenant_id,
       actor_id: user.id,
       action: "call.outbound_initiated",

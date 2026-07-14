@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@/lib/database/supabase-server";
+import { fromUntypedTable } from "@/lib/database/untyped-table";
 import { z } from "zod";
 import "@/industries";
 import { getIndustryPack } from "@/industries/core/registry";
@@ -53,8 +54,7 @@ export async function POST(
     }
 
     // Verify agent exists and belongs to tenant
-    const { data: agent } = await supabase
-      .from("agents" as any)
+    const { data: agent } = await fromUntypedTable(supabase, "agents")
       .select("*")
       .eq("id", id)
       .eq("tenant_id", tenant_id)
@@ -142,19 +142,18 @@ export async function POST(
     const compiled = compileAgent(tenantConfig, pack, {});
 
     // Determine next version number
-    const { data: latestVersion } = (await supabase
-      .from("agent_versions" as any)
+    const { data: latestVersionData } = await fromUntypedTable(supabase, "agent_versions")
       .select("version")
       .eq("agent_id", id)
       .order("version", { ascending: false })
       .limit(1)
-      .single()) as { data: any };
+      .single();
+    const latestVersion = latestVersionData as { version: number } | null;
 
-    const nextVersion = ((latestVersion as any)?.version || 0) + 1;
+    const nextVersion = (latestVersion?.version || 0) + 1;
 
     // Store compiled config as a new version
-    const { data: version, error: versionError } = await supabase
-      .from("agent_versions" as any)
+    const { data: version, error: versionError } = await fromUntypedTable(supabase, "agent_versions")
       .insert({
         agent_id: id,
         version: nextVersion,

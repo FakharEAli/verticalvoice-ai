@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@/lib/database/supabase-server";
 import { z } from "zod";
 import { uuidSchema } from "@/lib/validation/schemas";
+import type { Json } from "@/lib/database/types";
 
 const connectIntegrationSchema = z.object({
   tenant_id: uuidSchema,
@@ -42,7 +43,7 @@ export async function GET(request: NextRequest) {
     }
 
     const { data: integrations, error } = await supabase
-      .from("integrations" as any)
+      .from("integration_connections")
       .select("*")
       .eq("tenant_id", tenantId)
       .order("created_at", { ascending: false });
@@ -95,12 +96,12 @@ export async function POST(request: NextRequest) {
 
     // Upsert: update config if provider already connected, otherwise insert
     const { data: integration, error } = await supabase
-      .from("integrations" as any)
+      .from("integration_connections")
       .upsert(
         {
           tenant_id: parsed.data.tenant_id,
           provider: parsed.data.provider,
-          config: parsed.data.config,
+          config: parsed.data.config as Json,
         },
         { onConflict: "tenant_id,provider" }
       )

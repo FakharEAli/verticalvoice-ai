@@ -118,7 +118,7 @@ export async function DELETE(
     }
 
     // Log to audit_events
-    await supabase.from("audit_events" as any).insert({
+    await supabase.from("audit_events").insert({
       tenant_id,
       actor_id: user.id,
       action: "call.deleted",

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@/lib/database/supabase-server";
+import { fromUntypedTable } from "@/lib/database/untyped-table";
 import { z } from "zod";
 import { uuidSchema } from "@/lib/validation/schemas";
 
@@ -47,8 +48,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    const { data: rules, error } = await supabase
-      .from("escalation_rules" as any)
+    const { data: rules, error } = await fromUntypedTable(supabase, "escalation_rules")
       .select("*")
       .eq("tenant_id", tenantId)
       .order("priority", { ascending: true });
@@ -100,8 +100,7 @@ export async function PUT(request: NextRequest) {
     }
 
     // Delete existing rules
-    const { error: deleteError } = await supabase
-      .from("escalation_rules" as any)
+    const { error: deleteError } = await fromUntypedTable(supabase, "escalation_rules")
       .delete()
       .eq("tenant_id", parsed.data.tenant_id);
 
@@ -121,8 +120,7 @@ export async function PUT(request: NextRequest) {
       priority: r.priority,
     }));
 
-    const { data: rules, error: insertError } = await supabase
-      .from("escalation_rules" as any)
+    const { data: rules, error: insertError } = await fromUntypedTable(supabase, "escalation_rules")
       .insert(rows)
       .select();
 

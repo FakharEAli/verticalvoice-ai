@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
     );
 
     const { data, error } = await supabase
-      .from('bookings' as any)
+      .from('bookings')
       .update({
         date: parsed.data.new_date,
         time: parsed.data.new_time,

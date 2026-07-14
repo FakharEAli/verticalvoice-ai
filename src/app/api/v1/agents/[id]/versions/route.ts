@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@/lib/database/supabase-server";
+import { fromUntypedTable } from "@/lib/database/untyped-table";
 
 export async function GET(
   request: NextRequest,
@@ -42,8 +43,7 @@ export async function GET(
     }
 
     // Verify agent belongs to tenant
-    const { data: agent } = await supabase
-      .from("agents" as any)
+    const { data: agent } = await fromUntypedTable(supabase, "agents")
       .select("id")
       .eq("id", id)
       .eq("tenant_id", tenantId)
@@ -57,8 +57,7 @@ export async function GET(
     }
 
     // Fetch versions
-    const { data: versions, error } = await supabase
-      .from("agent_versions" as any)
+    const { data: versions, error } = await fromUntypedTable(supabase, "agent_versions")
       .select("*")
       .eq("agent_id", id)
       .order("version", { ascending: false });

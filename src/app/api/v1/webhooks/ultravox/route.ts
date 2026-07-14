@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
 import { createServerClient } from '@/lib/database/supabase-server';
+import { fromUntypedTable } from '@/lib/database/untyped-table';
 
 export async function POST(request: NextRequest) {
   const supabase = await createServerClient();
@@ -40,8 +41,7 @@ export async function POST(request: NextRequest) {
   }
 
   // Idempotency check
-  const { data: existing } = await supabase
-    .from('audit_events' as any)
+  const { data: existing } = await fromUntypedTable(supabase, 'audit_events')
     .select('id')
     .eq('resource_id', call_id)
     .eq('action', event)
@@ -55,7 +55,7 @@ export async function POST(request: NextRequest) {
   // Process events
   switch (event) {
     case 'call.started': {
-      await supabase.from('calls' as any).upsert(
+      await fromUntypedTable(supabase, 'calls').upsert(
         {
           provider_call_id: call_id,
           status: 'in_progress',
@@ -69,8 +69,7 @@ export async function POST(request: NextRequest) {
 
     case 'call.ended': {
       const duration = typeof data?.duration === 'number' ? data.duration : null;
-      await supabase
-        .from('calls' as any)
+      await fromUntypedTable(supabase, 'calls')
         .update({
           status: 'completed',
           duration_seconds: duration,
@@ -82,8 +81,7 @@ export async function POST(request: NextRequest) {
     }
 
     case 'call.failed': {
-      await supabase
-        .from('calls' as any)
+      await fromUntypedTable(supabase, 'calls')
         .update({
           status: 'failed',
           updated_at: new Date().toISOString(),
@@ -96,15 +94,15 @@ export async function POST(request: NextRequest) {
       const transcript = data?.transcript as string | undefined;
       if (transcript) {
         // Look up the call to get its id
-        const { data: call } = await supabase
-          .from('calls' as any)
+        const { data: call } = await fromUntypedTable(supabase, 'calls')
           .select('id')
           .eq('provider_call_id', call_id)
           .single();
 
         if (call) {
-          await supabase.from('transcripts' as any).insert({
-            call_id: (call as any).id,
+          const callId = (call as { id: string }).id;
+          await fromUntypedTable(supabase, 'transcripts').insert({
+            call_id: callId,
             content: transcript,
             created_at: new Date().toISOString(),
           });
@@ -118,7 +116,7 @@ export async function POST(request: NextRequest) {
   }
 
   // Log to audit_events
-  await supabase.from('audit_events' as any).insert({
+  await fromUntypedTable(supabase, 'audit_events').insert({
     resource_id: call_id,
     action: event,
     metadata: data ?? {},

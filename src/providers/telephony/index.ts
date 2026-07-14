@@ -1,5 +1,8 @@
 import { logger } from '@/lib/observability/logger';
 import type { TelephonyProvider } from './types';
+import { createTwilioProvider } from './twilio/adapter';
+import { createTelnyxProvider } from './telnyx/adapter';
+import { createMockTelephonyProvider } from './mock/adapter';
 
 export type TelephonyProviderName = 'twilio' | 'telnyx' | 'mock';
 
@@ -14,17 +17,14 @@ export function getTelephonyProvider(name?: TelephonyProviderName): TelephonyPro
 
   switch (resolved) {
     case 'twilio': {
-      const { createTwilioProvider } = require('./twilio/adapter') as typeof import('./twilio/adapter');
       cached = createTwilioProvider();
       break;
     }
     case 'telnyx': {
-      const { createTelnyxProvider } = require('./telnyx/adapter') as typeof import('./telnyx/adapter');
       cached = createTelnyxProvider();
       break;
     }
     case 'mock': {
-      const { createMockTelephonyProvider } = require('./mock/adapter') as typeof import('./mock/adapter');
       cached = createMockTelephonyProvider();
       break;
     }

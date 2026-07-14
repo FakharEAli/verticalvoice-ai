@@ -2,13 +2,7 @@ import Link from 'next/link';
 import type { Metadata } from 'next';
 import { brand } from '@/config/brand';
 import { Button } from '@/components/ui/button';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 
 export const metadata: Metadata = {

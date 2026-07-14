@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@/lib/database/supabase-server";
+import { fromUntypedTable } from "@/lib/database/untyped-table";
 import { z } from "zod";
 import { uuidSchema } from "@/lib/validation/schemas";
 
@@ -43,8 +44,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    const { data: sources, error } = await supabase
-      .from("knowledge_sources" as any)
+    const { data: sources, error } = await fromUntypedTable(supabase, "knowledge_sources")
       .select("*")
       .eq("tenant_id", tenantId)
       .order("created_at", { ascending: false });
@@ -95,8 +95,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    const { data: source, error } = await supabase
-      .from("knowledge_sources" as any)
+    const { data: source, error } = await fromUntypedTable(supabase, "knowledge_sources")
       .insert({
         tenant_id: parsed.data.tenant_id,
         type: parsed.data.type,

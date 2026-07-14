@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@/lib/database/supabase-server";
+import { fromUntypedTable } from "@/lib/database/untyped-table";
 import { z } from "zod";
 import { uuidSchema } from "@/lib/validation/schemas";
 
@@ -45,8 +46,7 @@ export async function GET(request: NextRequest) {
 
     const sourceId = request.nextUrl.searchParams.get("source_id");
 
-    let query = supabase
-      .from("knowledge_facts" as any)
+    let query = fromUntypedTable(supabase, "knowledge_facts")
       .select("*")
       .eq("tenant_id", tenantId)
       .order("created_at", { ascending: false });
@@ -108,8 +108,7 @@ export async function PATCH(request: NextRequest) {
     if (parsed.data.answer !== undefined) updates.answer = parsed.data.answer;
     if (parsed.data.enabled !== undefined) updates.enabled = parsed.data.enabled;
 
-    const { data: fact, error } = await supabase
-      .from("knowledge_facts" as any)
+    const { data: fact, error } = await fromUntypedTable(supabase, "knowledge_facts")
       .update(updates)
       .eq("id", parsed.data.fact_id)
       .eq("tenant_id", parsed.data.tenant_id)

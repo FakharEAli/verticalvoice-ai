@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@/lib/database/supabase-server";
+import { fromUntypedTable } from "@/lib/database/untyped-table";
 import { uuidSchema } from "@/lib/validation/schemas";
 
 export async function GET(
@@ -57,8 +58,7 @@ export async function GET(
     }
 
     // Query transcripts table (not in generated types, using untyped access)
-    const { data: transcript, error } = await supabase
-      .from("transcripts" as any)
+    const { data: transcript, error } = await fromUntypedTable(supabase, "transcripts")
       .select("*")
       .eq("call_id", id)
       .single();

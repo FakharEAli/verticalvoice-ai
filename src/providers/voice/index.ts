@@ -1,5 +1,8 @@
 import { logger } from '@/lib/observability/logger';
 import type { VoiceRuntimeProvider } from './types';
+import { createUltravoxProvider } from './ultravox/adapter';
+import { createRetellProvider } from './retell/adapter';
+import { createMockVoiceProvider } from './mock/adapter';
 
 export type VoiceProviderName = 'ultravox' | 'retell' | 'mock';
 
@@ -14,17 +17,14 @@ export function getVoiceProvider(name?: VoiceProviderName): VoiceRuntimeProvider
 
   switch (resolved) {
     case 'ultravox': {
-      const { createUltravoxProvider } = require('./ultravox/adapter') as typeof import('./ultravox/adapter');
       cached = createUltravoxProvider();
       break;
     }
     case 'retell': {
-      const { createRetellProvider } = require('./retell/adapter') as typeof import('./retell/adapter');
       cached = createRetellProvider();
       break;
     }
     case 'mock': {
-      const { createMockVoiceProvider } = require('./mock/adapter') as typeof import('./mock/adapter');
       cached = createMockVoiceProvider();
       break;
     }

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@/lib/database/supabase-server";
+import { fromUntypedTable } from "@/lib/database/untyped-table";
 import { z } from "zod";
 
 const createAgentSchema = z.object({
@@ -45,8 +46,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const { data: agents, error } = await supabase
-      .from("agents" as any)
+    const { data: agents, error } = await fromUntypedTable(supabase, "agents")
       .select("*")
       .eq("tenant_id", tenantId)
       .order("created_at", { ascending: false });
@@ -105,8 +105,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { data: agent, error } = await supabase
-      .from("agents" as any)
+    const { data: agent, error } = await fromUntypedTable(supabase, "agents")
       .insert({
         tenant_id,
         name,

@@ -42,7 +42,7 @@ export async function POST(request: NextRequest) {
     );
 
     const { data, error } = await supabase
-      .from('bookings' as any)
+      .from('bookings')
       .update({
         status: 'cancelled',
         cancellation_reason: parsed.data.reason ?? null,

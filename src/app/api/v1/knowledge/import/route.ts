@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@/lib/database/supabase-server";
+import { fromUntypedTable } from "@/lib/database/untyped-table";
 import { z } from "zod";
 import { uuidSchema, urlSchema } from "@/lib/validation/schemas";
 
@@ -45,8 +46,7 @@ export async function POST(request: NextRequest) {
 
     // Create a knowledge_source entry with status 'importing'
     // TODO: trigger actual web scraping job
-    const { data: source, error } = await supabase
-      .from("knowledge_sources" as any)
+    const { data: source, error } = await fromUntypedTable(supabase, "knowledge_sources")
       .insert({
         tenant_id: parsed.data.tenant_id,
         type: "website",
@@ -62,8 +62,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
+    const sourceId = (source as { id: string } | null)?.id;
+
     return NextResponse.json(
-      { source_id: (source as any).id, status: "importing" },
+      { source_id: sourceId, status: "importing" },
       { status: 201 }
     );
   } catch (error) {

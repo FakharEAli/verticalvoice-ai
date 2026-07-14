@@ -50,7 +50,7 @@ export async function POST(request: NextRequest) {
     const confirmationCode = `BK-${Date.now().toString(36).toUpperCase()}`;
 
     const { data, error } = await supabase
-      .from('bookings' as any)
+      .from('bookings')
       .insert({
         tenant_id: auth.tenant_id,
         call_id: auth.call_id,

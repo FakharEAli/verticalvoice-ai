@@ -254,28 +254,28 @@ INSERT INTO reservations (id, tenant_id, call_id, guest_name, guest_phone, guest
 
 -- RE Agents (3)
 INSERT INTO re_agents (id, tenant_id, first_name, last_name, email, phone, license_number, license_state, specializations, is_active) VALUES
-  ('g1000000-0000-0000-0000-000000000001', 'a0000000-0000-0000-0000-000000000003', 'Michael', 'Torres', 'm.torres@metrorealty.demo', '+15553003001', 'IL-RE-47201', 'IL', ARRAY['residential','luxury'], true),
-  ('g1000000-0000-0000-0000-000000000002', 'a0000000-0000-0000-0000-000000000003', 'Jennifer', 'Walsh', 'j.walsh@metrorealty.demo', '+15553003002', 'IL-RE-52843', 'IL', ARRAY['residential','first-time-buyers'], true),
-  ('g1000000-0000-0000-0000-000000000003', 'a0000000-0000-0000-0000-000000000003', 'David', 'Nguyen', 'd.nguyen@metrorealty.demo', '+15553003003', 'IL-RE-61029', 'IL', ARRAY['commercial','investment'], true);
+  ('d1000000-0000-0000-0000-000000000001', 'a0000000-0000-0000-0000-000000000003', 'Michael', 'Torres', 'm.torres@metrorealty.demo', '+15553003001', 'IL-RE-47201', 'IL', ARRAY['residential','luxury'], true),
+  ('d1000000-0000-0000-0000-000000000002', 'a0000000-0000-0000-0000-000000000003', 'Jennifer', 'Walsh', 'j.walsh@metrorealty.demo', '+15553003002', 'IL-RE-52843', 'IL', ARRAY['residential','first-time-buyers'], true),
+  ('d1000000-0000-0000-0000-000000000003', 'a0000000-0000-0000-0000-000000000003', 'David', 'Nguyen', 'd.nguyen@metrorealty.demo', '+15553003003', 'IL-RE-61029', 'IL', ARRAY['commercial','investment'], true);
 
 -- Listings (5)
 INSERT INTO listings (id, tenant_id, agent_id, mls_number, status, listing_type, property_type, address_line1, city, state, zip, price_cents, bedrooms, bathrooms, square_feet, year_built, description) VALUES
-  ('h1000000-0000-0000-0000-000000000001', 'a0000000-0000-0000-0000-000000000003', 'g1000000-0000-0000-0000-000000000001', 'MLS-DEMO-001', 'active', 'sale', 'single_family', '742 Oak Street', 'Chicago', 'IL', '60614', 52500000, 3, 2.5, 1850, 2005, 'DEMO: Beautifully updated 3BR/2.5BA in Lincoln Park with hardwood floors and modern kitchen'),
-  ('h1000000-0000-0000-0000-000000000002', 'a0000000-0000-0000-0000-000000000003', 'g1000000-0000-0000-0000-000000000001', 'MLS-DEMO-002', 'active', 'sale', 'condo', '1200 Lake Shore Dr, Unit 14C', 'Chicago', 'IL', '60610', 78500000, 2, 2, 1400, 2018, 'DEMO: Stunning lake-view condo with floor-to-ceiling windows and premium finishes'),
-  ('h1000000-0000-0000-0000-000000000003', 'a0000000-0000-0000-0000-000000000003', 'g1000000-0000-0000-0000-000000000002', 'MLS-DEMO-003', 'active', 'sale', 'single_family', '456 Elm Avenue', 'Evanston', 'IL', '60201', 42000000, 4, 3, 2200, 1998, 'DEMO: Spacious 4BR family home near top-rated schools with large backyard'),
-  ('h1000000-0000-0000-0000-000000000004', 'a0000000-0000-0000-0000-000000000003', 'g1000000-0000-0000-0000-000000000002', 'MLS-DEMO-004', 'pending', 'sale', 'townhouse', '890 Division St', 'Chicago', 'IL', '60622', 38900000, 3, 2, 1600, 2012, 'DEMO: Modern townhouse in Wicker Park with rooftop deck and garage parking'),
-  ('h1000000-0000-0000-0000-000000000005', 'a0000000-0000-0000-0000-000000000003', 'g1000000-0000-0000-0000-000000000003', 'MLS-DEMO-005', 'active', 'lease', 'condo', '333 Wacker Dr, Unit 22A', 'Chicago', 'IL', '60606', 350000, 1, 1, 750, 2020, 'DEMO: Downtown studio rental with city views, in-unit laundry');
+  ('e1000000-0000-0000-0000-000000000001', 'a0000000-0000-0000-0000-000000000003', 'd1000000-0000-0000-0000-000000000001', 'MLS-DEMO-001', 'active', 'sale', 'single_family', '742 Oak Street', 'Chicago', 'IL', '60614', 52500000, 3, 2.5, 1850, 2005, 'DEMO: Beautifully updated 3BR/2.5BA in Lincoln Park with hardwood floors and modern kitchen'),
+  ('e1000000-0000-0000-0000-000000000002', 'a0000000-0000-0000-0000-000000000003', 'd1000000-0000-0000-0000-000000000001', 'MLS-DEMO-002', 'active', 'sale', 'condo', '1200 Lake Shore Dr, Unit 14C', 'Chicago', 'IL', '60610', 78500000, 2, 2, 1400, 2018, 'DEMO: Stunning lake-view condo with floor-to-ceiling windows and premium finishes'),
+  ('e1000000-0000-0000-0000-000000000003', 'a0000000-0000-0000-0000-000000000003', 'd1000000-0000-0000-0000-000000000002', 'MLS-DEMO-003', 'active', 'sale', 'single_family', '456 Elm Avenue', 'Evanston', 'IL', '60201', 42000000, 4, 3, 2200, 1998, 'DEMO: Spacious 4BR family home near top-rated schools with large backyard'),
+  ('e1000000-0000-0000-0000-000000000004', 'a0000000-0000-0000-0000-000000000003', 'd1000000-0000-0000-0000-000000000002', 'MLS-DEMO-004', 'pending', 'sale', 'townhouse', '890 Division St', 'Chicago', 'IL', '60622', 38900000, 3, 2, 1600, 2012, 'DEMO: Modern townhouse in Wicker Park with rooftop deck and garage parking'),
+  ('e1000000-0000-0000-0000-000000000005', 'a0000000-0000-0000-0000-000000000003', 'd1000000-0000-0000-0000-000000000003', 'MLS-DEMO-005', 'active', 'lease', 'condo', '333 Wacker Dr, Unit 22A', 'Chicago', 'IL', '60606', 350000, 1, 1, 750, 2020, 'DEMO: Downtown studio rental with city views, in-unit laundry');
 
 -- Leads (3)
 INSERT INTO real_estate_leads (id, tenant_id, call_id, agent_id, first_name, last_name, email, phone, lead_type, source, status, budget_min_cents, budget_max_cents, timeline) VALUES
-  ('i1000000-0000-0000-0000-000000000001', 'a0000000-0000-0000-0000-000000000003', 'c3000000-0000-0000-0000-000000000001', 'g1000000-0000-0000-0000-000000000001', 'DEMO: Sarah', 'Miller', 's.miller@demo.test', '+15559003001', 'buyer', 'phone_call', 'active', 40000000, 55000000, '3-6 months'),
-  ('i1000000-0000-0000-0000-000000000002', 'a0000000-0000-0000-0000-000000000003', 'c3000000-0000-0000-0000-000000000003', 'g1000000-0000-0000-0000-000000000002', 'DEMO: Tom', 'Anderson', 't.anderson@demo.test', '+15559003003', 'buyer', 'phone_call', 'new', 35000000, 50000000, '1-3 months'),
-  ('i1000000-0000-0000-0000-000000000003', 'a0000000-0000-0000-0000-000000000003', NULL, 'g1000000-0000-0000-0000-000000000003', 'DEMO: Karen', 'Lee', 'k.lee@demo.test', '+15559003008', 'seller', 'website', 'qualified', NULL, NULL, 'ASAP');
+  ('f1000000-0000-0000-0000-000000000001', 'a0000000-0000-0000-0000-000000000003', 'c3000000-0000-0000-0000-000000000001', 'd1000000-0000-0000-0000-000000000001', 'DEMO: Sarah', 'Miller', 's.miller@demo.test', '+15559003001', 'buyer', 'phone_call', 'active', 40000000, 55000000, '3-6 months'),
+  ('f1000000-0000-0000-0000-000000000002', 'a0000000-0000-0000-0000-000000000003', 'c3000000-0000-0000-0000-000000000003', 'd1000000-0000-0000-0000-000000000002', 'DEMO: Tom', 'Anderson', 't.anderson@demo.test', '+15559003003', 'buyer', 'phone_call', 'new', 35000000, 50000000, '1-3 months'),
+  ('f1000000-0000-0000-0000-000000000003', 'a0000000-0000-0000-0000-000000000003', NULL, 'd1000000-0000-0000-0000-000000000003', 'DEMO: Karen', 'Lee', 'k.lee@demo.test', '+15559003008', 'seller', 'website', 'qualified', NULL, NULL, 'ASAP');
 
 -- Showings (2)
 INSERT INTO showings (id, tenant_id, listing_id, lead_id, agent_id, call_id, scheduled_at, duration_minutes, status, interest_level) VALUES
-  (gen_random_uuid(), 'a0000000-0000-0000-0000-000000000003', 'h1000000-0000-0000-0000-000000000001', 'i1000000-0000-0000-0000-000000000001', 'g1000000-0000-0000-0000-000000000001', 'c3000000-0000-0000-0000-000000000001', now() + interval '2 days' + interval '14 hours', 30, 'scheduled', NULL),
-  (gen_random_uuid(), 'a0000000-0000-0000-0000-000000000003', 'h1000000-0000-0000-0000-000000000003', 'i1000000-0000-0000-0000-000000000002', 'g1000000-0000-0000-0000-000000000002', NULL, now() + interval '4 days' + interval '10 hours', 45, 'scheduled', NULL);
+  (gen_random_uuid(), 'a0000000-0000-0000-0000-000000000003', 'e1000000-0000-0000-0000-000000000001', 'f1000000-0000-0000-0000-000000000001', 'd1000000-0000-0000-0000-000000000001', 'c3000000-0000-0000-0000-000000000001', now() + interval '2 days' + interval '14 hours', 30, 'scheduled', NULL),
+  (gen_random_uuid(), 'a0000000-0000-0000-0000-000000000003', 'e1000000-0000-0000-0000-000000000003', 'f1000000-0000-0000-0000-000000000002', 'd1000000-0000-0000-0000-000000000002', NULL, now() + interval '4 days' + interval '10 hours', 45, 'scheduled', NULL);
 
 -- ============================================================================
 -- DONE — All seed data inserted

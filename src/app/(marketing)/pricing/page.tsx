@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { brand } from '@/config/brand';
 import { Button } from '@/components/ui/button';
 import {
   Card,

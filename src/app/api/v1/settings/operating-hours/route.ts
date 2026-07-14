@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@/lib/database/supabase-server";
+import { fromUntypedTable } from "@/lib/database/untyped-table";
 import { z } from "zod";
 import { uuidSchema } from "@/lib/validation/schemas";
 
@@ -55,8 +56,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    const { data: hours, error } = await supabase
-      .from("operating_hours" as any)
+    const { data: hours, error } = await fromUntypedTable(supabase, "operating_hours")
       .select("*")
       .eq("tenant_id", tenantId)
       .order("day");
@@ -108,8 +108,7 @@ export async function PUT(request: NextRequest) {
     }
 
     // Delete existing hours
-    const { error: deleteError } = await supabase
-      .from("operating_hours" as any)
+    const { error: deleteError } = await fromUntypedTable(supabase, "operating_hours")
       .delete()
       .eq("tenant_id", parsed.data.tenant_id);
 
@@ -129,8 +128,7 @@ export async function PUT(request: NextRequest) {
       enabled: h.enabled,
     }));
 
-    const { data: hours, error: insertError } = await supabase
-      .from("operating_hours" as any)
+    const { data: hours, error: insertError } = await fromUntypedTable(supabase, "operating_hours")
       .insert(rows)
       .select();
 

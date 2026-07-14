@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@/lib/database/supabase-server';
+import { fromUntypedTable } from '@/lib/database/untyped-table';
 
 // TODO: Full ed25519 signature verification requires the telnyx package or tweetnacl.
 // For now we validate that the timestamp is within 5 minutes to prevent replay attacks.
@@ -63,8 +64,7 @@ export async function POST(request: NextRequest) {
   }
 
   // Idempotency check
-  const { data: existing } = await supabase
-    .from('audit_events' as any)
+  const { data: existing } = await fromUntypedTable(supabase, 'audit_events')
     .select('id')
     .eq('resource_id', callControlId)
     .eq('action', eventType)
@@ -78,7 +78,7 @@ export async function POST(request: NextRequest) {
   // Process events
   switch (eventType) {
     case 'call.initiated': {
-      await supabase.from('calls' as any).upsert(
+      await fromUntypedTable(supabase, 'calls').upsert(
         {
           provider_call_id: callControlId,
           status: 'initiated',
@@ -94,8 +94,7 @@ export async function POST(request: NextRequest) {
     }
 
     case 'call.answered': {
-      await supabase
-        .from('calls' as any)
+      await fromUntypedTable(supabase, 'calls')
         .update({
           status: 'in_progress',
           updated_at: new Date().toISOString(),
@@ -106,8 +105,7 @@ export async function POST(request: NextRequest) {
 
     case 'call.hangup': {
       const duration = typeof payload.duration_secs === 'number' ? payload.duration_secs : null;
-      await supabase
-        .from('calls' as any)
+      await fromUntypedTable(supabase, 'calls')
         .update({
           status: 'completed',
           duration_seconds: duration,
@@ -120,8 +118,7 @@ export async function POST(request: NextRequest) {
 
     case 'call.recording.saved': {
       if (payload.recording_url) {
-        await supabase
-          .from('calls' as any)
+        await fromUntypedTable(supabase, 'calls')
           .update({
             recording_url: payload.recording_url,
             updated_at: new Date().toISOString(),
@@ -136,7 +133,7 @@ export async function POST(request: NextRequest) {
   }
 
   // Log to audit_events
-  await supabase.from('audit_events' as any).insert({
+  await fromUntypedTable(supabase, 'audit_events').insert({
     resource_id: callControlId,
     action: eventType,
     metadata: payload ?? {},

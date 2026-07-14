@@ -4,7 +4,6 @@ import { verifyCallToken, type CallTokenPayload, TokenError } from './token';
 import { redactOutput as applyRedaction, buildRedactionRules, type RedactionRule } from './redaction';
 import { createClient } from '@/lib/database/supabase-server';
 import { evaluateAllPolicies, type PolicyContext, type PolicyDecision } from '@/industries/core/policies';
-import type { CompiledAgentConfig } from '@/industries/core/compiler';
 import type { IndustryId, PolicyDefinition } from '@/industries/core/industry-pack';
 import type { Json } from '@/lib/database/types';
 

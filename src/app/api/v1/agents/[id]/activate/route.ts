@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@/lib/database/supabase-server";
+import { fromUntypedTable } from "@/lib/database/untyped-table";
 import { z } from "zod";
 
 const activateSchema = z.object({
@@ -50,8 +51,7 @@ export async function POST(
     }
 
     // Update agent status
-    const { error: agentError } = await supabase
-      .from("agents" as any)
+    const { error: agentError } = await fromUntypedTable(supabase, "agents")
       .update({ status: "active" })
       .eq("id", id)
       .eq("tenant_id", tenant_id);
@@ -64,19 +64,18 @@ export async function POST(
     }
 
     // Update latest agent_version status to active
-    const { data: latestVersion } = (await supabase
-      .from("agent_versions" as any)
+    const { data: latestVersion } = await fromUntypedTable(supabase, "agent_versions")
       .select("id")
       .eq("agent_id", id)
       .order("version", { ascending: false })
       .limit(1)
-      .single()) as { data: any };
+      .single();
 
     if (latestVersion) {
-      await supabase
-        .from("agent_versions" as any)
+      const versionId = (latestVersion as { id: string }).id;
+      await fromUntypedTable(supabase, "agent_versions")
         .update({ status: "active" })
-        .eq("id", (latestVersion as any).id);
+        .eq("id", versionId);
     }
 
     // Log audit event

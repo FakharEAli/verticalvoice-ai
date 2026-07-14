@@ -58,7 +58,7 @@ export async function POST(request: NextRequest) {
     );
 
     const { data, error } = await supabase
-      .from('orders' as any)
+      .from('orders')
       .insert({
         tenant_id: auth.tenant_id,
         call_id: auth.call_id,

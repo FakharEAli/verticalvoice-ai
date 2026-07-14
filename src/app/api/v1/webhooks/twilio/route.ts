@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
 import { createServerClient } from '@/lib/database/supabase-server';
+import { fromUntypedTable } from '@/lib/database/untyped-table';
 
 function validateTwilioSignature(
   authToken: string,
@@ -76,8 +77,7 @@ export async function POST(request: NextRequest) {
 
   // Idempotency check
   const eventKey = `${callStatus}`;
-  const { data: existing } = await supabase
-    .from('audit_events' as any)
+  const { data: existing } = await fromUntypedTable(supabase, 'audit_events')
     .select('id')
     .eq('resource_id', callSid)
     .eq('action', eventKey)
@@ -94,7 +94,7 @@ export async function POST(request: NextRequest) {
   switch (callStatus.toLowerCase()) {
     case 'initiated':
     case 'ringing': {
-      await supabase.from('calls' as any).upsert(
+      await fromUntypedTable(supabase, 'calls').upsert(
         {
           provider_call_id: callSid,
           status: mappedStatus,
@@ -110,8 +110,7 @@ export async function POST(request: NextRequest) {
     }
 
     case 'in-progress': {
-      await supabase
-        .from('calls' as any)
+      await fromUntypedTable(supabase, 'calls')
         .update({
           status: 'in_progress',
           updated_at: new Date().toISOString(),
@@ -122,8 +121,7 @@ export async function POST(request: NextRequest) {
 
     case 'completed': {
       const duration = params.Duration ? parseInt(params.Duration, 10) : null;
-      await supabase
-        .from('calls' as any)
+      await fromUntypedTable(supabase, 'calls')
         .update({
           status: 'completed',
           duration_seconds: duration,
@@ -137,8 +135,7 @@ export async function POST(request: NextRequest) {
     case 'failed':
     case 'busy':
     case 'no-answer': {
-      await supabase
-        .from('calls' as any)
+      await fromUntypedTable(supabase, 'calls')
         .update({
           status: mappedStatus,
           ended_at: new Date().toISOString(),
@@ -153,7 +150,7 @@ export async function POST(request: NextRequest) {
   }
 
   // Log to audit_events
-  await supabase.from('audit_events' as any).insert({
+  await fromUntypedTable(supabase, 'audit_events').insert({
     resource_id: callSid,
     action: eventKey,
     metadata: params,

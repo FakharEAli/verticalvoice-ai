@@ -44,7 +44,7 @@ export async function POST(request: NextRequest) {
 
     // Log the transfer event for audit trail
     const { error } = await supabase
-      .from('audit_events' as any)
+      .from('audit_events')
       .insert({
         tenant_id: auth.tenant_id,
         call_id: auth.call_id,

@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
     );
 
     const { data, error } = await supabase
-      .from('reservations' as any)
+      .from('reservations')
       .insert({
         tenant_id: auth.tenant_id,
         call_id: auth.call_id,
