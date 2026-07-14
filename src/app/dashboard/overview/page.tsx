@@ -80,12 +80,12 @@ export default function OverviewPage() {
         <CardContent>
           <div className="flex flex-wrap gap-6 text-sm">
             <div className="flex items-center gap-2">
-              <Phone className="size-4 text-muted-foreground" />
+              <Phone className="size-4 text-muted-foreground" aria-hidden="true" />
               <span className="text-muted-foreground">Phone:</span>
               <span className="font-medium">+1 (555) 123-4567</span>
             </div>
             <div className="flex items-center gap-2">
-              <Activity className="size-4 text-muted-foreground" />
+              <Activity className="size-4 text-muted-foreground" aria-hidden="true" />
               <span className="text-muted-foreground">Industry:</span>
               <span className="font-medium">Healthcare</span>
             </div>
@@ -98,7 +98,7 @@ export default function OverviewPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Calls Handled</CardTitle>
-            <PhoneCall className="size-4 text-muted-foreground" />
+            <PhoneCall className="size-4 text-muted-foreground" aria-hidden="true" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">24</div>
@@ -109,7 +109,7 @@ export default function OverviewPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Resolution Rate</CardTitle>
-            <Target className="size-4 text-muted-foreground" />
+            <Target className="size-4 text-muted-foreground" aria-hidden="true" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">87%</div>
@@ -120,7 +120,7 @@ export default function OverviewPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Human Handoffs</CardTitle>
-            <UserCheck className="size-4 text-muted-foreground" />
+            <UserCheck className="size-4 text-muted-foreground" aria-hidden="true" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">3</div>
@@ -131,7 +131,7 @@ export default function OverviewPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Avg Duration</CardTitle>
-            <Clock className="size-4 text-muted-foreground" />
+            <Clock className="size-4 text-muted-foreground" aria-hidden="true" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">2m 34s</div>
@@ -201,15 +201,15 @@ export default function OverviewPage() {
             </CardHeader>
             <CardContent className="space-y-2">
               <Button className="w-full justify-start gap-2" variant="outline">
-                <PhoneOutgoing className="size-4" />
+                <PhoneOutgoing className="size-4" aria-hidden="true" />
                 Test Call
               </Button>
               <Button className="w-full justify-start gap-2" variant="outline">
-                <Settings className="size-4" />
+                <Settings className="size-4" aria-hidden="true" />
                 Edit Agent
               </Button>
               <Button className="w-full justify-start gap-2" variant="outline">
-                <BarChart3 className="size-4" />
+                <BarChart3 className="size-4" aria-hidden="true" />
                 View Analytics
               </Button>
             </CardContent>

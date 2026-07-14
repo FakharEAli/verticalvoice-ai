@@ -6,6 +6,7 @@ import { createClient } from '@/lib/database/supabase-server';
 import { evaluateAllPolicies, type PolicyContext, type PolicyDecision } from '@/industries/core/policies';
 import type { IndustryId, PolicyDefinition } from '@/industries/core/industry-pack';
 import type { Json } from '@/lib/database/types';
+import { checkRateLimit } from '@/lib/security/rate-limit';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -204,6 +205,33 @@ async function resolveAgentConfig(tenantId: string): Promise<AgentConfig> {
     piiRedactionEnabled: policySettings?.pii_redaction_enabled ?? false,
     hipaaMode: policySettings?.hipaa_mode ?? false,
   };
+}
+
+// Tool calls happen repeatedly within a single live call (one per intent),
+// so the budget is generous per-call but still bounds runaway/looping agents
+// or a compromised call token. Per-tenant budget guards against a tenant
+// with many simultaneous live calls overwhelming shared downstream services.
+const TOOL_CALLS_PER_CALL_LIMIT = 30;
+const TOOL_CALLS_PER_CALL_WINDOW_MS = 60_000;
+const TOOL_CALLS_PER_TENANT_LIMIT = 300;
+const TOOL_CALLS_PER_TENANT_WINDOW_MS = 60_000;
+
+/**
+ * Step 3b: Enforce a per-call and per-tenant tool-call rate limit.
+ * This is independent of (and in addition to) the idempotency cache, which
+ * only dedupes retried calls sharing the same idempotency key — it does not
+ * bound the overall call rate.
+ */
+function applyRateLimit(tenantId: string, callId: string): void {
+  const perCall = checkRateLimit(`tool-call:call:${callId}`, TOOL_CALLS_PER_CALL_LIMIT, TOOL_CALLS_PER_CALL_WINDOW_MS);
+  if (!perCall.allowed) {
+    throw new GatewayError('rate_limited', 'Too many tool calls for this call', 429);
+  }
+
+  const perTenant = checkRateLimit(`tool-call:tenant:${tenantId}`, TOOL_CALLS_PER_TENANT_LIMIT, TOOL_CALLS_PER_TENANT_WINDOW_MS);
+  if (!perTenant.allowed) {
+    throw new GatewayError('rate_limited', 'Too many tool calls for this tenant', 429);
+  }
 }
 
 /**
@@ -416,6 +444,9 @@ export async function handleToolCall(
 
     // Step 3: Resolve agent config
     const agentConfig = await resolveAgentConfig(tenantId);
+
+    // Step 3b: Rate limit
+    applyRateLimit(tenantId, callId);
 
     // Step 4: Validate tool is enabled
     validateToolEnabled(tokenPayload, toolName);

@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
 import { createServerClient } from '@/lib/database/supabase-server';
 import { fromUntypedTable } from '@/lib/database/untyped-table';
+import { withRetry } from '@/lib/jobs/retry';
+import { moveToDeadLetter } from '@/lib/jobs/dead-letter';
 
 function validateTwilioSignature(
   authToken: string,
@@ -90,72 +92,99 @@ export async function POST(request: NextRequest) {
 
   const mappedStatus = mapTwilioStatus(callStatus);
 
-  // Process based on status
-  switch (callStatus.toLowerCase()) {
-    case 'initiated':
-    case 'ringing': {
-      await fromUntypedTable(supabase, 'calls').upsert(
-        {
-          provider_call_id: callSid,
-          status: mappedStatus,
-          direction: params.Direction === 'outbound-api' ? 'outbound' : 'inbound',
-          caller_number: params.From || null,
-          called_number: params.To || null,
-          started_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: 'provider_call_id' }
-      );
-      break;
+  // Process based on status. Wrapped in withRetry: Supabase writes here are
+  // usually reliable, but transient network/DB blips shouldn't cost us the
+  // event — retry a couple of times with backoff before giving up.
+  try {
+    await withRetry(
+      async () => {
+        switch (callStatus.toLowerCase()) {
+          case 'initiated':
+          case 'ringing': {
+            await fromUntypedTable(supabase, 'calls').upsert(
+              {
+                provider_call_id: callSid,
+                status: mappedStatus,
+                direction: params.Direction === 'outbound-api' ? 'outbound' : 'inbound',
+                caller_number: params.From || null,
+                called_number: params.To || null,
+                started_at: new Date().toISOString(),
+                updated_at: new Date().toISOString(),
+              },
+              { onConflict: 'provider_call_id' }
+            );
+            break;
+          }
+
+          case 'in-progress': {
+            await fromUntypedTable(supabase, 'calls')
+              .update({
+                status: 'in_progress',
+                updated_at: new Date().toISOString(),
+              })
+              .eq('provider_call_id', callSid);
+            break;
+          }
+
+          case 'completed': {
+            const duration = params.Duration ? parseInt(params.Duration, 10) : null;
+            await fromUntypedTable(supabase, 'calls')
+              .update({
+                status: 'completed',
+                duration_seconds: duration,
+                ended_at: new Date().toISOString(),
+                updated_at: new Date().toISOString(),
+              })
+              .eq('provider_call_id', callSid);
+            break;
+          }
+
+          case 'failed':
+          case 'busy':
+          case 'no-answer': {
+            await fromUntypedTable(supabase, 'calls')
+              .update({
+                status: mappedStatus,
+                ended_at: new Date().toISOString(),
+                updated_at: new Date().toISOString(),
+              })
+              .eq('provider_call_id', callSid);
+            break;
+          }
+
+          default:
+            console.warn(`[twilio-webhook] Unhandled CallStatus: ${callStatus}`);
+        }
+
+        // Log to audit_events
+        const { error: auditError } = await fromUntypedTable(supabase, 'audit_events').insert({
+          resource_id: callSid,
+          action: eventKey,
+          metadata: params,
+          created_at: new Date().toISOString(),
+        });
+        if (auditError) throw new Error(auditError.message);
+      },
+      { maxAttempts: 3, backoffMs: 250, label: 'twilio-webhook-process' }
+    );
+  } catch (err) {
+    // Retries exhausted — durably queue for later reprocessing instead of
+    // silently dropping the event. Best-effort tenant lookup since the
+    // `calls` upsert above doesn't carry tenant_id from Twilio's payload.
+    const { data: callRow } = await fromUntypedTable(supabase, 'calls')
+      .select('tenant_id')
+      .eq('provider_call_id', callSid)
+      .maybeSingle();
+    const tenantId = (callRow as { tenant_id?: string } | null)?.tenant_id;
+
+    if (tenantId) {
+      await moveToDeadLetter(tenantId, 'webhook:twilio', callStatus, params, err);
+      return NextResponse.json({ status: 'queued_for_retry' }, { status: 202 });
     }
 
-    case 'in-progress': {
-      await fromUntypedTable(supabase, 'calls')
-        .update({
-          status: 'in_progress',
-          updated_at: new Date().toISOString(),
-        })
-        .eq('provider_call_id', callSid);
-      break;
-    }
-
-    case 'completed': {
-      const duration = params.Duration ? parseInt(params.Duration, 10) : null;
-      await fromUntypedTable(supabase, 'calls')
-        .update({
-          status: 'completed',
-          duration_seconds: duration,
-          ended_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        })
-        .eq('provider_call_id', callSid);
-      break;
-    }
-
-    case 'failed':
-    case 'busy':
-    case 'no-answer': {
-      await fromUntypedTable(supabase, 'calls')
-        .update({
-          status: mappedStatus,
-          ended_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        })
-        .eq('provider_call_id', callSid);
-      break;
-    }
-
-    default:
-      console.warn(`[twilio-webhook] Unhandled CallStatus: ${callStatus}`);
+    console.error('[twilio-webhook] processing failed and no tenant_id resolvable for dead-letter', err);
+    return NextResponse.json({ error: 'processing_failed' }, { status: 500 });
   }
-
-  // Log to audit_events
-  await fromUntypedTable(supabase, 'audit_events').insert({
-    resource_id: callSid,
-    action: eventKey,
-    metadata: params,
-    created_at: new Date().toISOString(),
-  });
 
   return NextResponse.json({ status: 'ok' }, { status: 200 });
 }

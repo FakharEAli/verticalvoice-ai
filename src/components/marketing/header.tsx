@@ -48,9 +48,11 @@ export function MarketingHeader() {
                 <Link
                   href={link.href}
                   className="inline-flex items-center gap-1 rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
+                  aria-haspopup="true"
+                  aria-expanded={industriesOpen}
                 >
                   {link.label}
-                  <ChevronDownIcon className="h-3.5 w-3.5" />
+                  <ChevronDownIcon className="h-3.5 w-3.5" aria-hidden="true" />
                 </Link>
                 {industriesOpen && (
                   <div className="absolute left-0 top-full z-50 mt-1 w-56 rounded-lg border bg-background p-2 shadow-lg">
@@ -94,7 +96,9 @@ export function MarketingHeader() {
           type="button"
           className="lg:hidden"
           onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-          aria-label="Toggle menu"
+          aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'}
+          aria-expanded={mobileMenuOpen}
+          aria-controls="mobile-nav"
         >
           <svg
             className="h-6 w-6"
@@ -102,6 +106,7 @@ export function MarketingHeader() {
             viewBox="0 0 24 24"
             strokeWidth="1.5"
             stroke="currentColor"
+            aria-hidden="true"
           >
             {mobileMenuOpen ? (
               <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
@@ -118,7 +123,7 @@ export function MarketingHeader() {
 
       {/* Mobile nav */}
       {mobileMenuOpen && (
-        <div className="border-t px-4 py-4 lg:hidden">
+        <div id="mobile-nav" className="border-t px-4 py-4 lg:hidden">
           <div className="flex flex-col gap-1">
             {navLinks.map((link) => (
               <div key={link.label}>

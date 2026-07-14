@@ -1,36 +1,51 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# VerticalVoice AI
 
-## Getting Started
+Multi-tenant, multi-vertical AI voice agent platform — one core engine,
+industry-specific packs (healthcare, restaurant, real estate) that plug in
+intents, tools, policies, and compliance guardrails for each vertical.
 
-First, run the development server:
+[![CI](https://github.com/alifakhar816/verticalvoice-ai/actions/workflows/ci.yml/badge.svg)](https://github.com/alifakhar816/verticalvoice-ai/actions)
+
+## Tech stack
+
+- **Framework**: Next.js 16 (App Router) + React 19 + TypeScript
+- **Database & Auth**: Supabase (PostgreSQL, Row-Level Security, email/password + magic link + Google OAuth)
+- **Voice runtime**: Ultravox (primary), Retell (fallback), mock provider for local dev
+- **Telephony**: Twilio (primary), Telnyx (cost-optimized), mock provider for local dev
+- **Styling/UI**: Tailwind CSS 4 + shadcn/ui
+- **Validation**: Zod
+- **Integrations**: Google Calendar, Square (restaurant POS), HubSpot (real estate CRM), Resend (email)
+
+See `docs/architecture/INVENTORY.md` for the full technology and file-structure breakdown.
+
+## Quickstart
 
 ```bash
+git clone https://github.com/alifakhar816/verticalvoice-ai.git
+cd verticalvoice-ai
+npm install
+cp .env.example .env.local   # fill in Supabase keys once `supabase start` is running
+supabase start                # starts local Supabase (Docker required)
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000). Local dev runs with
+`VOICE_PROVIDER=mock` and `TELEPHONY_PROVIDER=mock` by default, so no
+external voice/telephony credentials are required to explore the app.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+`supabase/seed.sql` creates demo tenant/agent data plus a demo user
+(`demo@verticalvoice.ai`), but does not set a login password — that requires
+a separate Supabase Admin API call. See
+[`docs/architecture/DEPLOYMENT.md`](docs/architecture/DEPLOYMENT.md) for the
+full local setup walkthrough, including how to seed and authenticate as the
+demo user.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Documentation
 
-## Learn More
+- [`docs/architecture/`](docs/architecture/) — system inventory, ADRs, deployment guide, feature flags
+- [`docs/runbooks/`](docs/runbooks/) — operational runbooks
+- [`docs/compliance/`](docs/compliance/) — PHI handling, outbound-calling compliance checklists
 
-To learn more about Next.js, take a look at the following resources:
+## License
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+MIT — see [LICENSE](LICENSE).

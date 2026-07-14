@@ -159,7 +159,7 @@ export function AppSidebar({ user }: AppSidebarProps) {
               render={<a href="/dashboard/overview" />}
             >
               <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-                <Zap className="size-4" />
+                <Zap className="size-4" aria-hidden="true" />
               </div>
               <div className="grid flex-1 text-left text-sm leading-tight">
                 <span className="truncate font-semibold">VerticalVoice</span>
@@ -184,7 +184,7 @@ export function AppSidebar({ user }: AppSidebarProps) {
                     isActive={isActive(item.url)}
                     tooltip={item.title}
                   >
-                    <item.icon />
+                    <item.icon aria-hidden="true" />
                     <span>{item.title}</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -206,7 +206,7 @@ export function AppSidebar({ user }: AppSidebarProps) {
                     isActive={isActive(item.url)}
                     tooltip={item.title}
                   >
-                    <item.icon />
+                    <item.icon aria-hidden="true" />
                     <span>{item.title}</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -241,7 +241,7 @@ export function AppSidebar({ user }: AppSidebarProps) {
                     {user.email}
                   </span>
                 </div>
-                <ChevronsUpDown className="ml-auto size-4" />
+                <ChevronsUpDown className="ml-auto size-4" aria-hidden="true" />
               </DropdownMenuTrigger>
               <DropdownMenuContent
                 className="min-w-56 rounded-lg"
@@ -266,7 +266,7 @@ export function AppSidebar({ user }: AppSidebarProps) {
                 </div>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={handleSignOut}>
-                  <LogOut className="mr-2 size-4" />
+                  <LogOut className="mr-2 size-4" aria-hidden="true" />
                   Sign out
                 </DropdownMenuItem>
               </DropdownMenuContent>
