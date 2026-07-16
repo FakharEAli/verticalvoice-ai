@@ -1,4 +1,5 @@
 import { createServerClient } from "@/lib/database/supabase-server";
+import { createAdminClient } from "@/lib/database/supabase-admin";
 
 export type Industry = "healthcare" | "restaurant" | "real_estate";
 
@@ -17,7 +18,11 @@ function slugify(name: string): string {
 }
 
 export async function createTenant(input: CreateTenantInput) {
-  const supabase = await createServerClient();
+  // Bootstrapping a brand-new tenant has no RLS-eligible session context yet
+  // (tenants/tenant_members/business_profiles/etc. have no INSERT policy that
+  // a not-yet-a-member user can satisfy), so this runs as the service role,
+  // same as the webhook/worker admin-client pattern.
+  const supabase = createAdminClient();
   const slug = `${slugify(input.name)}-${Date.now().toString(36)}`;
 
   const { data: tenant, error: tenantError } = await supabase

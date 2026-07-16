@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@/lib/database/supabase-server";
+import { createAdminClient } from "@/lib/database/supabase-admin";
 import { createTenant, type Industry } from "@/domain/tenants/service";
 import { getOrCreateInternalUser } from "@/domain/users/service";
 import { z } from "zod";
@@ -44,6 +45,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    // Provisioning writes below run as the service role: tenants, business
+    // profiles, agent drafts/configs, etc. have no RLS policy that a
+    // not-yet-a-member user's cookie-scoped session could satisfy.
+    const admin = createAdminClient();
+
     const body = await request.json();
     const parsed = finalizeSchema.safeParse(body);
 
@@ -70,7 +76,7 @@ export async function POST(request: NextRequest) {
 
     const speedMap = { slower: 0.85, natural: 1.0, faster: 1.15 };
 
-    const { error: profileError } = await supabase
+    const { error: profileError } = await admin
       .from("business_profiles")
       .update({
         business_name: fields.businessName,
@@ -95,7 +101,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { error: voiceError } = await supabase
+    const { error: voiceError } = await admin
       .from("voice_profiles")
       .update({
         voice_id: fields.voiceId,
@@ -111,7 +117,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { error: policyError } = await supabase
+    const { error: policyError } = await admin
       .from("policy_settings")
       .update({
         recording_consent_required: fields.aiDisclosure,
@@ -148,7 +154,7 @@ export async function POST(request: NextRequest) {
 
     const compiled = compileAgent(tenantConfig, pack, {});
 
-    const { data: draft, error: draftError } = await supabase
+    const { data: draft, error: draftError } = await admin
       .from("agent_drafts")
       .insert({
         tenant_id: tenant.id,
@@ -175,7 +181,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { data: version, error: versionError } = await supabase
+    const { data: version, error: versionError } = await admin
       .from("agent_config_versions")
       .insert({
         tenant_id: tenant.id,
@@ -195,7 +201,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { error: activeConfigError } = await supabase
+    const { error: activeConfigError } = await admin
       .from("active_agent_configs")
       .insert({
         tenant_id: tenant.id,
@@ -211,7 +217,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { error: tenantStatusError } = await supabase
+    const { error: tenantStatusError } = await admin
       .from("tenants")
       .update({ status: "active" })
       .eq("id", tenant.id);
@@ -223,7 +229,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { error: auditError } = await supabase.from("audit_events").insert({
+    const { error: auditError } = await admin.from("audit_events").insert({
       tenant_id: tenant.id,
       actor_id: user.id,
       action: "tenant.activated",
