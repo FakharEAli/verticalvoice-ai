@@ -87,6 +87,11 @@ export interface Database {
           country: string | null;
           timezone: string | null;
           logo_url: string | null;
+          contact_name: string | null;
+          preferred_language: string | null;
+          secondary_language: string | null;
+          number_of_locations: number | null;
+          business_size: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -105,6 +110,11 @@ export interface Database {
           country?: string | null;
           timezone?: string | null;
           logo_url?: string | null;
+          contact_name?: string | null;
+          preferred_language?: string | null;
+          secondary_language?: string | null;
+          number_of_locations?: number | null;
+          business_size?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -123,6 +133,11 @@ export interface Database {
           country?: string | null;
           timezone?: string | null;
           logo_url?: string | null;
+          contact_name?: string | null;
+          preferred_language?: string | null;
+          secondary_language?: string | null;
+          number_of_locations?: number | null;
+          business_size?: string | null;
           created_at?: string;
           updated_at?: string;
         };
