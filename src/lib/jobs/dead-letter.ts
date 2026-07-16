@@ -9,7 +9,7 @@
  * silently dropped and can be inspected/replayed later via `retryDeadLetter`.
  */
 
-import { createClient } from '@/lib/database/supabase-server';
+import { createAdminClient } from '@/lib/database/supabase-admin';
 import { logger } from '@/lib/observability/logger';
 import type { Json } from '@/lib/database/types';
 
@@ -49,7 +49,7 @@ export async function moveToDeadLetter(
   error: unknown,
   opts: { maxRetries?: number } = {},
 ): Promise<DeadLetterEvent | null> {
-  const supabase = await createClient();
+  const supabase = createAdminClient();
   const errorMessage = error instanceof Error ? error.message : String(error);
 
   const { data, error: insertError } = await supabase
@@ -92,7 +92,7 @@ export async function moveToDeadLetter(
  * handler themselves, then call this to close it out on success.
  */
 export async function resolveDeadLetter(id: string): Promise<void> {
-  const supabase = await createClient();
+  const supabase = createAdminClient();
   const { error } = await supabase
     .from('dead_letter_events')
     .update({ status: 'resolved', resolved_at: new Date().toISOString() })
@@ -116,7 +116,7 @@ export async function resolveDeadLetter(id: string): Promise<void> {
  * abandoned.
  */
 export async function retryDeadLetter(id: string): Promise<DeadLetterEvent | null> {
-  const supabase = await createClient();
+  const supabase = createAdminClient();
 
   const { data: existing, error: fetchError } = await supabase
     .from('dead_letter_events')
@@ -166,7 +166,7 @@ export async function retryDeadLetter(id: string): Promise<DeadLetterEvent | nul
  * manual triage). Ordered oldest-first so the longest-stuck events surface.
  */
 export async function listPendingDeadLetters(tenantId: string, limit = 50): Promise<DeadLetterEvent[]> {
-  const supabase = await createClient();
+  const supabase = createAdminClient();
   const { data, error } = await supabase
     .from('dead_letter_events')
     .select('*')

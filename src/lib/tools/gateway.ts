@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { logger } from '@/lib/observability/logger';
 import { verifyCallToken, type CallTokenPayload, TokenError } from './token';
 import { redactOutput as applyRedaction, buildRedactionRules, type RedactionRule } from './redaction';
-import { createClient } from '@/lib/database/supabase-server';
+import { createAdminClient } from '@/lib/database/supabase-admin';
 import { evaluateAllPolicies, type PolicyContext, type PolicyDecision } from '@/industries/core/policies';
 import type { IndustryId, PolicyDefinition } from '@/industries/core/industry-pack';
 import type { Json } from '@/lib/database/types';
@@ -147,7 +147,7 @@ function authenticateCallToken(request: ToolCallRequest): CallTokenPayload {
  * Step 2: Resolve tenant information from the call record.
  */
 async function resolveTenant(callId: string, tenantId: string): Promise<TenantInfo> {
-  const supabase = await createClient();
+  const supabase = createAdminClient();
 
   // Verify the call belongs to this tenant
   const { data: call, error: callError } = await supabase
@@ -183,7 +183,7 @@ async function resolveTenant(callId: string, tenantId: string): Promise<TenantIn
  * Step 3: Resolve the agent configuration for this tenant.
  */
 async function resolveAgentConfig(tenantId: string): Promise<AgentConfig> {
-  const supabase = await createClient();
+  const supabase = createAdminClient();
 
   // Fetch policy settings for redaction config
   const { data: policySettings } = await supabase
@@ -391,7 +391,7 @@ async function logToolRun(
   error?: string,
 ): Promise<void> {
   try {
-    const supabase = await createClient();
+    const supabase = createAdminClient();
 
     await supabase.from('audit_events').insert({
       tenant_id: _tenantId,

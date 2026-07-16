@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { logger } from '@/lib/observability/logger';
-import { createClient } from '@/lib/database/supabase-server';
+import { createAdminClient } from '@/lib/database/supabase-admin';
 import type { Database } from '@/lib/database/types';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -198,7 +198,7 @@ export async function processCallEnd(callId: string): Promise<CallNormalizationR
   const validated = callIdSchema.parse(callId);
   logger.info('call-normalizer: starting normalization', { callId: validated });
 
-  const supabase = await createClient();
+  const supabase = createAdminClient();
 
   try {
     // 1. Fetch call record
