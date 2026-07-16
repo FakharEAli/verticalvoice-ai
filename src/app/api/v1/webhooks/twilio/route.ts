@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
-import { createServerClient } from '@/lib/database/supabase-server';
+import { createAdminClient } from '@/lib/database/supabase-admin';
 import { fromUntypedTable } from '@/lib/database/untyped-table';
 import { withRetry } from '@/lib/jobs/retry';
 import { moveToDeadLetter } from '@/lib/jobs/dead-letter';
@@ -45,7 +45,7 @@ function mapTwilioStatus(callStatus: string): string {
 }
 
 export async function POST(request: NextRequest) {
-  const supabase = await createServerClient();
+  const supabase = createAdminClient();
 
   // Parse form data
   const formData = await request.formData();

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createServerClient } from '@/lib/database/supabase-server';
+import { createAdminClient } from '@/lib/database/supabase-admin';
 import { validateTwilioSignature } from '@/lib/webhooks/signature';
 import { logger } from '@/lib/observability/logger';
 
@@ -47,7 +47,7 @@ async function createUltravoxCall(systemPrompt: string, voiceId: string | null):
 }
 
 export async function POST(request: NextRequest) {
-  const supabase = await createServerClient();
+  const supabase = createAdminClient();
 
   const formData = await request.formData();
   const params: Record<string, string> = {};

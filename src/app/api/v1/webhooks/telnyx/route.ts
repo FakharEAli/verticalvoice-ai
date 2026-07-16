@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createServerClient } from '@/lib/database/supabase-server';
+import { createAdminClient } from '@/lib/database/supabase-admin';
 import { fromUntypedTable } from '@/lib/database/untyped-table';
 import { withRetry } from '@/lib/jobs/retry';
 import { moveToDeadLetter } from '@/lib/jobs/dead-letter';
@@ -16,7 +16,7 @@ function validateTelnyxTimestamp(timestamp: string | null): boolean {
 }
 
 export async function POST(request: NextRequest) {
-  const supabase = await createServerClient();
+  const supabase = createAdminClient();
 
   // Validate signature / timestamp
   const telnyxSignature = request.headers.get('telnyx-signature-ed25519');
