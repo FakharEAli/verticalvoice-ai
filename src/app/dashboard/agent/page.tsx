@@ -1,6 +1,3 @@
-"use client";
-
-import { useState } from "react";
 import {
   Card,
   CardContent,
@@ -9,149 +6,160 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { Switch } from "@/components/ui/switch";
 import {
   Bot,
-  Play,
-  RefreshCw,
-  Power,
-  History,
   Volume2,
   Wrench,
-  ShieldCheck,
-  AlertTriangle,
-  CheckCircle2,
   Hash,
   Clock,
   Package,
   Mic,
   Gauge,
   MessageSquare,
-  CalendarCheck,
-  CalendarPlus,
-  CalendarX,
-  ShieldQuestion,
-  PhoneForwarded,
-  MessageCircle,
+  CheckCircle2,
 } from "lucide-react";
+import { createServerClient } from "@/lib/database/supabase-server";
+import { getCurrentTenantId } from "@/domain/tenants/current";
+import { getAgentConfig } from "@/domain/agents/service";
+import type { Json } from "@/lib/database/types";
 
-const tools = [
-  {
-    name: "Check Appointments",
-    description: "Look up existing appointment details and availability",
-    icon: CalendarCheck,
-    enabled: true,
-  },
-  {
-    name: "Book Appointment",
-    description: "Schedule new appointments for patients",
-    icon: CalendarPlus,
-    enabled: true,
-  },
-  {
-    name: "Cancel Appointment",
-    description: "Cancel or reschedule existing appointments",
-    icon: CalendarX,
-    enabled: true,
-  },
-  {
-    name: "Check Insurance",
-    description: "Verify insurance coverage and eligibility",
-    icon: ShieldQuestion,
-    enabled: true,
-  },
-  {
-    name: "Transfer Call",
-    description: "Transfer caller to a human agent or department",
-    icon: PhoneForwarded,
-    enabled: true,
-  },
-  {
-    name: "Send SMS",
-    description: "Send confirmation or follow-up text messages",
-    icon: MessageCircle,
-    enabled: true,
-  },
-];
+interface AgentSnapshot {
+  draft_id?: string;
+  system_prompt?: string;
+  model?: string;
+  temperature?: number;
+  tools?: Json;
+  business_name?: string;
+  voice?: {
+    provider?: string;
+    voice_id?: string | null;
+    speed?: number;
+    language?: string;
+  } | null;
+  compiled_at?: string;
+}
 
-const policyRules = [
-  {
-    rule: "Always disclose AI",
-    description: "Inform callers they are speaking with an AI assistant",
-  },
-  {
-    rule: "Get recording consent",
-    description: "Obtain verbal consent before recording any call",
-  },
-  {
-    rule: "No medical advice",
-    description: "Never provide medical diagnoses or treatment recommendations",
-  },
-  {
-    rule: "Escalate emergencies",
-    description: "Immediately escalate any life-threatening situations",
-  },
-];
+function asAgentSnapshot(snapshot: Json): AgentSnapshot {
+  if (snapshot && typeof snapshot === "object" && !Array.isArray(snapshot)) {
+    return snapshot as AgentSnapshot;
+  }
+  return {};
+}
 
-const escalationRules = [
-  {
-    condition: "After 3 failed attempts",
-    action: "Transfer to queue",
-    severity: "medium" as const,
-  },
-  {
-    condition: "Emergency detected",
-    action: "Call 911 protocol",
-    severity: "critical" as const,
-  },
-  {
-    condition: "Customer requests human",
-    action: "Transfer to next available",
-    severity: "low" as const,
-  },
-];
+function toolList(tools: Json | undefined): string[] {
+  if (!Array.isArray(tools)) return [];
+  return tools.map((tool, i) => {
+    if (tool && typeof tool === "object" && !Array.isArray(tool)) {
+      const record = tool as Record<string, Json | undefined>;
+      const name = record.name ?? record.type;
+      if (typeof name === "string") return name;
+    }
+    if (typeof tool === "string") return tool;
+    return `Tool ${i + 1}`;
+  });
+}
 
-export default function AgentPage() {
-  const [isActive, setIsActive] = useState(true);
+function formatDate(iso: string | undefined | null): string {
+  if (!iso) return "Unknown";
+  return new Date(iso).toLocaleString(undefined, {
+    dateStyle: "medium",
+    timeStyle: "short",
+  });
+}
+
+function PageHeader() {
+  return (
+    <div>
+      <h1 className="text-3xl font-bold tracking-tight">Agent Configuration</h1>
+      <p className="text-muted-foreground">
+        Real-time view of your active AI calling agent&apos;s compiled configuration.
+      </p>
+    </div>
+  );
+}
+
+function EmptyState({ title, description }: { title: string; description: string }) {
+  return (
+    <div className="space-y-6">
+      <PageHeader />
+      <Card>
+        <CardHeader>
+          <CardTitle>{title}</CardTitle>
+          <CardDescription>{description}</CardDescription>
+        </CardHeader>
+      </Card>
+    </div>
+  );
+}
+
+export default async function AgentPage() {
+  const supabase = await createServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return (
+      <EmptyState
+        title="No tenant configured for this account"
+        description="Your account isn't linked to any tenant yet, so there's nothing to show here."
+      />
+    );
+  }
+
+  const tenantId = await getCurrentTenantId(user.id);
+
+  if (!tenantId) {
+    return (
+      <EmptyState
+        title="No tenant configured for this account"
+        description="Your account isn't linked to any tenant yet, so there's nothing to show here. Contact an administrator to be added to a tenant."
+      />
+    );
+  }
+
+  const activeConfig = await getAgentConfig(tenantId);
+
+  if (!activeConfig) {
+    return (
+      <EmptyState
+        title="No agent configured yet"
+        description="This tenant doesn't have an active agent configuration. Compile and activate a config to see it here."
+      />
+    );
+  }
+
+  const { data: versionRow } = await supabase
+    .from("agent_config_versions")
+    .select("version, snapshot, draft_id")
+    .eq("id", activeConfig.agent_config_version_id)
+    .maybeSingle();
+
+  const snapshot = versionRow ? asAgentSnapshot(versionRow.snapshot) : {};
+  const tools = toolList(snapshot.tools);
+
+  let industryPackName: string | null = null;
+  const draftId = snapshot.draft_id ?? versionRow?.draft_id ?? null;
+  if (draftId) {
+    const { data: draft } = await supabase
+      .from("agent_drafts")
+      .select("industry_pack_id")
+      .eq("id", draftId)
+      .maybeSingle();
+    if (draft?.industry_pack_id) {
+      const { data: pack } = await supabase
+        .from("industry_packs")
+        .select("name")
+        .eq("id", draft.industry_pack_id)
+        .maybeSingle();
+      industryPackName = pack?.name ?? null;
+    }
+  }
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">
-            Agent Configuration
-          </h1>
-          <p className="text-muted-foreground">
-            Configure your AI calling agent&apos;s behavior, voice, tools, and
-            policies.
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="outline" size="sm">
-            <RefreshCw className="mr-2 size-4" />
-            Recompile
-          </Button>
-          <Button
-            variant={isActive ? "destructive" : "default"}
-            size="sm"
-            onClick={() => setIsActive(!isActive)}
-          >
-            <Power className="mr-2 size-4" />
-            {isActive ? "Deactivate" : "Activate"}
-          </Button>
-          <Button variant="outline" size="sm">
-            <Play className="mr-2 size-4" />
-            Test Agent
-          </Button>
-          <Button variant="outline" size="sm">
-            <History className="mr-2 size-4" />
-            View History
-          </Button>
-        </div>
-      </div>
+      <PageHeader />
 
       {/* Current Config Status */}
       <Card>
@@ -172,7 +180,9 @@ export default function AgentPage() {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Active Version</p>
-                <p className="font-semibold">v2.4.1</p>
+                <p className="font-semibold">
+                  {versionRow?.version != null ? `v${versionRow.version}` : "Unknown"}
+                </p>
               </div>
             </div>
             <div className="flex items-center gap-3">
@@ -180,8 +190,10 @@ export default function AgentPage() {
                 <Hash className="size-5 text-muted-foreground" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Config Hash</p>
-                <p className="font-mono font-semibold">a3f8c2...</p>
+                <p className="text-sm text-muted-foreground">Config ID</p>
+                <p className="font-mono text-xs font-semibold">
+                  {activeConfig.agent_config_version_id.slice(0, 8)}…
+                </p>
               </div>
             </div>
             <div className="flex items-center gap-3">
@@ -189,8 +201,8 @@ export default function AgentPage() {
                 <Clock className="size-5 text-muted-foreground" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Last Compiled</p>
-                <p className="font-semibold">2 hours ago</p>
+                <p className="text-sm text-muted-foreground">Activated</p>
+                <p className="font-semibold">{formatDate(activeConfig.activated_at)}</p>
               </div>
             </div>
             <div className="flex items-center gap-3">
@@ -199,7 +211,7 @@ export default function AgentPage() {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Industry Pack</p>
-                <p className="font-semibold">Healthcare Pro</p>
+                <p className="font-semibold">{industryPackName ?? "Custom / none"}</p>
               </div>
             </div>
           </div>
@@ -215,160 +227,125 @@ export default function AgentPage() {
               Voice Settings
             </CardTitle>
             <CardDescription>
-              Voice profile and speech configuration.
+              Voice profile and speech configuration captured in this config.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Mic className="size-4 text-muted-foreground" />
-                <span className="text-sm text-muted-foreground">Voice</span>
-              </div>
-              <span className="text-sm font-medium">Sarah (Female)</span>
-            </div>
-            <Separator />
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <MessageSquare className="size-4 text-muted-foreground" />
-                <span className="text-sm text-muted-foreground">Tone</span>
-              </div>
-              <span className="text-sm font-medium">
-                Professional &amp; Warm
-              </span>
-            </div>
-            <Separator />
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Gauge className="size-4 text-muted-foreground" />
-                <span className="text-sm text-muted-foreground">Pace</span>
-              </div>
-              <span className="text-sm font-medium">Normal (1.0x)</span>
-            </div>
-            <Separator />
-            <div>
-              <span className="text-sm text-muted-foreground">
-                Greeting Message
-              </span>
-              <p className="mt-2 text-sm italic text-foreground/70">
-                &quot;Hello, thank you for calling Acme Health Clinic. My name
-                is Sarah, your virtual assistant. How may I help you
-                today?&quot;
+            {snapshot.voice ? (
+              <>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Mic className="size-4 text-muted-foreground" />
+                    <span className="text-sm text-muted-foreground">Provider</span>
+                  </div>
+                  <span className="text-sm font-medium capitalize">
+                    {snapshot.voice.provider ?? "Not set"}
+                  </span>
+                </div>
+                <Separator />
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <MessageSquare className="size-4 text-muted-foreground" />
+                    <span className="text-sm text-muted-foreground">Voice ID</span>
+                  </div>
+                  <span className="text-sm font-medium">{snapshot.voice.voice_id ?? "Not set"}</span>
+                </div>
+                <Separator />
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Gauge className="size-4 text-muted-foreground" />
+                    <span className="text-sm text-muted-foreground">Speed</span>
+                  </div>
+                  <span className="text-sm font-medium">
+                    {snapshot.voice.speed != null ? `${snapshot.voice.speed}x` : "Default"}
+                  </span>
+                </div>
+                <Separator />
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">Language</span>
+                  <span className="text-sm font-medium">{snapshot.voice.language ?? "Not set"}</span>
+                </div>
+              </>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                No voice profile was captured in this config.
               </p>
-            </div>
+            )}
           </CardContent>
         </Card>
 
-        {/* Enabled Tools */}
+        {/* Model & Tools */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Wrench className="size-5" />
-              Enabled Tools
+              Model &amp; Tools
             </CardTitle>
             <CardDescription>
-              Capabilities available to the agent during calls.
+              The language model and capabilities compiled into this config.
             </CardDescription>
           </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {tools.map((tool) => (
-                <div
-                  key={tool.name}
-                  className="flex items-start gap-3 rounded-lg border p-3"
-                >
-                  <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-green-600" />
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
-                      <tool.icon className="size-4 text-muted-foreground" />
-                      <span className="text-sm font-medium">{tool.name}</span>
-                    </div>
-                    <p className="mt-0.5 text-xs text-muted-foreground">
-                      {tool.description}
-                    </p>
-                  </div>
-                  <Switch checked={tool.enabled} />
-                </div>
-              ))}
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-muted-foreground">Model</span>
+              <span className="text-sm font-medium">{snapshot.model ?? "Not set"}</span>
             </div>
-          </CardContent>
-        </Card>
-
-        {/* Policy Rules */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <ShieldCheck className="size-5" />
-              Policy Rules
-            </CardTitle>
-            <CardDescription>
-              Compliance and behavioral guardrails for the agent.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {policyRules.map((policy) => (
-                <div
-                  key={policy.rule}
-                  className="flex items-start gap-3 rounded-lg border p-3"
-                >
-                  <ShieldCheck className="mt-0.5 size-4 shrink-0 text-blue-600" />
-                  <div>
-                    <p className="text-sm font-medium">{policy.rule}</p>
-                    <p className="mt-0.5 text-xs text-muted-foreground">
-                      {policy.description}
-                    </p>
-                  </div>
-                </div>
-              ))}
+            <Separator />
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-muted-foreground">Temperature</span>
+              <span className="text-sm font-medium">
+                {snapshot.temperature != null ? snapshot.temperature : "Not set"}
+              </span>
             </div>
-          </CardContent>
-        </Card>
-
-        {/* Escalation Rules */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <AlertTriangle className="size-5" />
-              Escalation Rules
-            </CardTitle>
-            <CardDescription>
-              Conditions that trigger agent handoff or escalation.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {escalationRules.map((rule) => (
-                <div
-                  key={rule.condition}
-                  className="flex items-start justify-between gap-3 rounded-lg border p-3"
-                >
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2">
-                      <Badge
-                        variant={
-                          rule.severity === "critical"
-                            ? "destructive"
-                            : "outline"
-                        }
-                        className="text-xs"
-                      >
-                        {rule.severity}
-                      </Badge>
-                      <span className="text-sm font-medium">
-                        {rule.condition}
-                      </span>
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                      Action: {rule.action}
-                    </p>
-                  </div>
-                  <PhoneForwarded className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
+            <Separator />
+            <div>
+              <p className="mb-2 text-sm text-muted-foreground">Enabled Tools</p>
+              {tools.length > 0 ? (
+                <div className="flex flex-wrap gap-2">
+                  {tools.map((tool, i) => (
+                    <Badge key={`${tool}-${i}`} variant="secondary">
+                      {tool}
+                    </Badge>
+                  ))}
                 </div>
-              ))}
+              ) : (
+                <p className="text-sm text-muted-foreground">No tools configured.</p>
+              )}
             </div>
           </CardContent>
         </Card>
       </div>
+
+      {/* System Prompt */}
+      <Card>
+        <CardHeader>
+          <CardTitle>System Prompt</CardTitle>
+          <CardDescription>
+            The compiled instructions driving this agent&apos;s behavior on calls.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {snapshot.system_prompt ? (
+            <details>
+              <summary className="cursor-pointer text-sm font-medium text-primary">
+                View full system prompt ({snapshot.system_prompt.length.toLocaleString()} characters)
+              </summary>
+              <pre className="mt-3 max-h-[32rem] overflow-auto whitespace-pre-wrap rounded-lg bg-muted p-4 text-xs leading-relaxed">
+                {snapshot.system_prompt}
+              </pre>
+            </details>
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              No system prompt was captured in this config.
+            </p>
+          )}
+          {snapshot.compiled_at && (
+            <p className="mt-4 text-xs text-muted-foreground">
+              Compiled {formatDate(snapshot.compiled_at)}
+            </p>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }
