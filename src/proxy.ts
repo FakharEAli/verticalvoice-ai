@@ -9,10 +9,20 @@ const PUBLIC_ROUTES = new Set([
   '/forgot-password',
   '/verify-email',
   '/callback',
+  // Public marketing site — the (marketing) route group. Anonymous visitors
+  // must be able to reach all of these before creating an account.
+  '/industries',
+  '/how-it-works',
+  '/pricing',
+  '/security',
+  '/demo',
+  '/privacy',
+  '/terms',
 ]);
 
 function isPublicRoute(pathname: string): boolean {
   if (PUBLIC_ROUTES.has(pathname)) return true;
+  if (pathname.startsWith('/industries/')) return true;
   if (pathname.startsWith('/api/v1/webhooks/')) return true;
   if (pathname.startsWith('/_next/') || pathname.startsWith('/favicon')) return true;
   return false;

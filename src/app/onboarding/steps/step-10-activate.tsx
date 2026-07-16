@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -10,7 +11,7 @@ import {
 } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Separator } from '@/components/ui/separator';
-import { Rocket, CheckCircle2, PartyPopper } from 'lucide-react';
+import { Rocket, CheckCircle2, PartyPopper, Loader2 } from 'lucide-react';
 import type { StepProps } from '../types';
 
 const checklistItems = [
@@ -42,7 +43,10 @@ const checklistItems = [
 ];
 
 export function Step10Activate({ data, updateData }: StepProps) {
+  const router = useRouter();
   const [activated, setActivated] = useState(false);
+  const [activating, setActivating] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const checklist = data.activationChecklist;
   const allChecked = checklistItems.every((item) => checklist[item.id]);
@@ -56,8 +60,52 @@ export function Step10Activate({ data, updateData }: StepProps) {
     });
   };
 
-  const handleActivate = () => {
-    setActivated(true);
+  const handleActivate = async () => {
+    setActivating(true);
+    setError(null);
+
+    try {
+      const response = await fetch('/api/v1/onboarding/finalize', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          industry: data.industry,
+          businessName: data.businessName,
+          websiteUrl: data.websiteUrl,
+          country: data.country,
+          timezone: data.timezone,
+          mainPhone: data.mainPhone,
+          businessAddress: data.businessAddress,
+          contactName: data.contactName,
+          contactEmail: data.contactEmail,
+          preferredLanguage: data.preferredLanguage,
+          secondaryLanguage: data.secondaryLanguage,
+          numberOfLocations: data.numberOfLocations,
+          businessSize: data.businessSize,
+          industryConfig: data.industryConfig,
+          voiceId: data.voiceId,
+          tone: data.tone,
+          speakingPace: data.speakingPace,
+          greetingStyle: data.greetingStyle,
+          aiDisclosure: data.aiDisclosure,
+          transferNumber: data.transferNumber,
+          afterHoursBehavior: data.afterHoursBehavior,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to activate your agent');
+      }
+
+      window.localStorage.removeItem('verticalvoice_onboarding_state');
+      setActivated(true);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to activate your agent');
+    } finally {
+      setActivating(false);
+    }
   };
 
   if (activated) {
@@ -72,8 +120,14 @@ export function Step10Activate({ data, updateData }: StepProps) {
           handle calls for {data.businessName || 'your business'}.
         </p>
         <div className="mt-8 flex gap-3">
-          <Button size="lg">Go to Dashboard</Button>
-          <Button variant="outline" size="lg">
+          <Button size="lg" onClick={() => router.push('/dashboard/overview')}>
+            Go to Dashboard
+          </Button>
+          <Button
+            variant="outline"
+            size="lg"
+            onClick={() => router.push('/dashboard/calls')}
+          >
             View Call Logs
           </Button>
         </div>
@@ -131,19 +185,27 @@ export function Step10Activate({ data, updateData }: StepProps) {
 
       <Separator />
 
-      <div className="flex justify-center">
+      <div className="flex flex-col items-center gap-3">
         <Button
           size="lg"
-          disabled={!allChecked}
+          disabled={!allChecked || activating}
           onClick={handleActivate}
           className="px-12"
         >
-          <Rocket className="mr-2 size-4" />
-          Activate Agent
+          {activating ? (
+            <Loader2 className="mr-2 size-4 animate-spin" />
+          ) : (
+            <Rocket className="mr-2 size-4" />
+          )}
+          {activating ? 'Activating…' : 'Activate Agent'}
         </Button>
+
+        {error && (
+          <p className="text-center text-sm text-destructive">{error}</p>
+        )}
       </div>
 
-      {!allChecked && (
+      {!allChecked && !error && (
         <p className="text-center text-xs text-muted-foreground">
           Complete all checklist items to activate your agent
         </p>

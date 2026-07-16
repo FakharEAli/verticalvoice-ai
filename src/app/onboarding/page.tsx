@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { ChevronLeft, ChevronRight, SkipForward } from 'lucide-react';
@@ -20,9 +20,31 @@ import { Step8Preflight } from './steps/step-8-preflight';
 import { Step9TestCall } from './steps/step-9-test-call';
 import { Step10Activate } from './steps/step-10-activate';
 
+const STORAGE_KEY = 'verticalvoice_onboarding_state';
+
+function loadPersistedState(): { data: OnboardingData; currentStep: number } | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = window.localStorage.getItem(STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object' || !parsed.data) return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
 export default function OnboardingPage() {
-  const [currentStep, setCurrentStep] = useState(0);
-  const [data, setData] = useState<OnboardingData>(initialOnboardingData);
+  const persisted = loadPersistedState();
+  const [currentStep, setCurrentStep] = useState(persisted?.currentStep ?? 0);
+  const [data, setData] = useState<OnboardingData>(
+    persisted?.data ?? initialOnboardingData
+  );
+
+  useEffect(() => {
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify({ data, currentStep }));
+  }, [data, currentStep]);
 
   const updateData = useCallback((partial: Partial<OnboardingData>) => {
     setData((prev) => ({ ...prev, ...partial }));

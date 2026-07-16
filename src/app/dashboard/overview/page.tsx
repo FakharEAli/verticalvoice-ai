@@ -8,6 +8,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import Link from "next/link";
 import {
   Activity,
   Phone,
@@ -374,18 +375,24 @@ export default async function OverviewPage() {
               <CardTitle>Quick Actions</CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
-              <Button className="w-full justify-start gap-2" variant="outline">
-                <PhoneOutgoing className="size-4" aria-hidden="true" />
-                Test Call
-              </Button>
-              <Button className="w-full justify-start gap-2" variant="outline">
-                <Settings className="size-4" aria-hidden="true" />
-                Edit Agent
-              </Button>
-              <Button className="w-full justify-start gap-2" variant="outline">
-                <BarChart3 className="size-4" aria-hidden="true" />
-                View Analytics
-              </Button>
+              <Link href="/dashboard/test-center" className="block">
+                <Button className="w-full justify-start gap-2" variant="outline">
+                  <PhoneOutgoing className="size-4" aria-hidden="true" />
+                  Test Call
+                </Button>
+              </Link>
+              <Link href="/dashboard/agent" className="block">
+                <Button className="w-full justify-start gap-2" variant="outline">
+                  <Settings className="size-4" aria-hidden="true" />
+                  Edit Agent
+                </Button>
+              </Link>
+              <Link href="/dashboard/analytics" className="block">
+                <Button className="w-full justify-start gap-2" variant="outline">
+                  <BarChart3 className="size-4" aria-hidden="true" />
+                  View Analytics
+                </Button>
+              </Link>
             </CardContent>
           </Card>
         </div>
