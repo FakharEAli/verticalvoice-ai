@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { logger } from '@/lib/observability/logger';
-import { createClient } from '@/lib/database/supabase-server';
+import { createAdminClient } from '@/lib/database/supabase-admin';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -60,7 +60,7 @@ function maskPhone(phone: string): string {
  * Check if we have active consent to call this number.
  */
 async function checkConsent(tenantId: string, phone: string): Promise<ComplianceCheck> {
-  const supabase = await createClient();
+  const supabase = createAdminClient();
 
   const { data, error } = await supabase
     .from('consent_records')
@@ -101,7 +101,7 @@ async function checkConsent(tenantId: string, phone: string): Promise<Compliance
  * Check if the number is on the tenant's suppression list.
  */
 async function checkSuppression(tenantId: string, phone: string): Promise<ComplianceCheck> {
-  const supabase = await createClient();
+  const supabase = createAdminClient();
 
   const { data, error } = await supabase
     .from('suppression_entries')
@@ -149,7 +149,7 @@ async function checkSuppression(tenantId: string, phone: string): Promise<Compli
  * with a flag (production should wire to an external DNC API).
  */
 async function checkDNC(tenantId: string, phone: string): Promise<ComplianceCheck> {
-  const supabase = await createClient();
+  const supabase = createAdminClient();
 
   // Look for a recent DNC check (valid within the last 30 days)
   const thirtyDaysAgo = new Date();
@@ -229,7 +229,7 @@ async function checkQuietHours(_tenantId: string, _phone: string): Promise<Compl
  * Counts from outbound_attempts table.
  */
 async function checkFrequencyCap(tenantId: string, phone: string): Promise<ComplianceCheck> {
-  const supabase = await createClient();
+  const supabase = createAdminClient();
   const now = new Date();
 
   // Count calls in the last 24 hours
@@ -333,7 +333,7 @@ export async function initiateOutbound(
   const checks: ComplianceCheck[] = [];
 
   try {
-    const supabase = await createClient();
+    const supabase = createAdminClient();
 
     // Check tenant allows outbound calls
     const { data: policySettings } = await supabase

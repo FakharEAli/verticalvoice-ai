@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { logger } from '@/lib/observability/logger';
-import { createClient } from '@/lib/database/supabase-server';
+import { createAdminClient } from '@/lib/database/supabase-admin';
 import type { IndustryId } from '@/industries/core/industry-pack';
 import {
   extractBusinessInfo,
@@ -485,7 +485,7 @@ export async function importWebsite(
     industryId: validated.industryId,
   });
 
-  const supabase = await createClient();
+  const supabase = createAdminClient();
 
   try {
     // 1. Fetch the main page

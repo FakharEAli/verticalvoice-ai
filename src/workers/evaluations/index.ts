@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { logger } from '@/lib/observability/logger';
-import { createClient } from '@/lib/database/supabase-server';
+import { createAdminClient } from '@/lib/database/supabase-admin';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -367,7 +367,7 @@ function computeOverallScore(scores: DimensionScore[]): number {
 // ─── Data Fetcher ─────────────────────────────────────────────────────────────
 
 async function fetchCallDataForEval(callId: string): Promise<CallDataForEval> {
-  const supabase = await createClient();
+  const supabase = createAdminClient();
 
   // Fetch call record
   const { data: call, error: callError } = await supabase
@@ -454,7 +454,7 @@ export async function evaluateCall(callId: string): Promise<CallEvaluation> {
     const evaluatedAt = new Date().toISOString();
 
     // 4. Persist to call_evaluations table
-    const supabase = await createClient();
+    const supabase = createAdminClient();
 
     const { error: evalError } = await supabase
       .from('call_evaluations')
