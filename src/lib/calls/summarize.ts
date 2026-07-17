@@ -75,7 +75,8 @@ function buildActionItems(toolRuns: ToolRunRow[]): string[] {
 export async function summarizeCall(
   supabase: SupabaseClient<Database>,
   callId: string,
-  tenantId: string
+  tenantId: string,
+  ultravoxSummary?: string
 ): Promise<void> {
   const { data: existing } = await supabase
     .from("call_summaries")
@@ -106,7 +107,11 @@ export async function summarizeCall(
     ? `${Math.round(call.duration_seconds / 60)} min`
     : "unknown duration";
   const directionText = call?.direction === "outbound" ? "Outbound call" : "Inbound call";
-  const summary =
+  // Prefer Ultravox's own conversation summary (it read the whole call) when
+  // available; fall back to the tool-run-derived summary otherwise. Either
+  // way the key_points / action_items / outcome below stay grounded in what
+  // the agent actually *did* (call_tool_runs), not a model's paraphrase.
+  const heuristicSummary =
     toolRuns.length > 0
       ? `${directionText}, ${durationText}. ${toolRuns.length} action${
           toolRuns.length === 1 ? "" : "s"
@@ -115,6 +120,7 @@ export async function summarizeCall(
           " "
         )}.`
       : `${directionText}, ${durationText}. No structured actions were taken during this call.`;
+  const summary = ultravoxSummary?.trim() ? ultravoxSummary.trim() : heuristicSummary;
 
   await supabase.from("call_summaries").insert({
     call_id: callId,
@@ -123,7 +129,7 @@ export async function summarizeCall(
     key_points: keyPoints,
     action_items: actionItems,
     sentiment,
-    model: "heuristic-v1",
+    model: ultravoxSummary?.trim() ? "ultravox" : "heuristic-v1",
   });
 
   await supabase.from("call_outcomes").insert({

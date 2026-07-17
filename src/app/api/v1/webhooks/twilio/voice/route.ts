@@ -150,6 +150,15 @@ export async function POST(request: NextRequest) {
       return sayAndHangup('We could not connect you to our assistant right now. Please try again later.');
     }
 
+    // Remember which Ultravox call this is so the post-call reconciler can
+    // poll it later for the transcript, recording, duration, and summary.
+    if (callRow) {
+      await supabase
+        .from('calls')
+        .update({ ultravox_call_id: ultravoxCall.callId })
+        .eq('id', callRow.id);
+    }
+
     logger.info('twilio-voice-webhook: bridging call to Ultravox', {
       tenantId,
       callSid,

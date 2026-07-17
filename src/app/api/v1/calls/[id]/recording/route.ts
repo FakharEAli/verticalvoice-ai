@@ -1,87 +1,79 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@/lib/database/supabase-server";
-import { uuidSchema } from "@/lib/validation/schemas";
+import { getCurrentTenantId } from "@/domain/tenants/current";
 
+const UV_BASE = process.env.ULTRAVOX_BASE_URL ?? "https://api.ultravox.ai/api";
+
+/**
+ * Streams a call recording. The recording lives in Ultravox behind an
+ * API-key-gated endpoint that 302-redirects to a short-lived (5 min) signed
+ * GCS URL. We resolve that fresh on every request so the URL stored on the
+ * call row (this route's own path) never expires and the API key stays
+ * server-side. An <audio src> pointed here follows the redirect and plays.
+ */
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const supabase = await createServerClient();
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
     if (authError || !user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const tenantId = await getCurrentTenantId(user.id);
+    if (!tenantId) {
+      return NextResponse.json({ error: "No tenant found for this account" }, { status: 403 });
+    }
+
     const { id } = await params;
-    const tenant_id = request.nextUrl.searchParams.get("tenant_id");
-
-    if (!tenant_id) {
-      return NextResponse.json(
-        { error: "Invalid input", details: { fieldErrors: { tenant_id: ["Required"] } } },
-        { status: 400 }
-      );
-    }
-
-    const tenantParsed = uuidSchema.safeParse(tenant_id);
-    if (!tenantParsed.success) {
-      return NextResponse.json(
-        { error: "Invalid input", details: { fieldErrors: { tenant_id: ["Invalid UUID"] } } },
-        { status: 400 }
-      );
-    }
-
-    // Verify tenant membership
-    const { data: membership } = await supabase
-      .from("tenant_members")
-      .select("tenant_id")
-      .eq("user_id", user.id)
-      .eq("tenant_id", tenant_id)
-      .single();
-
-    if (!membership) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
-
-    // Look up the call and its recording_url
     const { data: call, error } = await supabase
       .from("calls")
-      .select("id, recording_url")
+      .select("id, ultravox_call_id, recording_url")
       .eq("id", id)
-      .eq("tenant_id", tenant_id)
+      .eq("tenant_id", tenantId)
       .single();
 
     if (error || !call) {
       return NextResponse.json({ error: "Call not found" }, { status: 404 });
     }
 
-    if (!call.recording_url) {
-      return NextResponse.json({ error: "No recording available" }, { status: 404 });
+    // Preferred path: resolve a fresh signed URL from Ultravox.
+    if (call.ultravox_call_id) {
+      const apiKey = process.env.ULTRAVOX_API_KEY;
+      if (!apiKey) {
+        return NextResponse.json({ error: "Voice provider not configured" }, { status: 500 });
+      }
+      const uvRes = await fetch(`${UV_BASE}/calls/${call.ultravox_call_id}/recording`, {
+        headers: { "X-API-Key": apiKey },
+        redirect: "manual",
+      });
+      const location = uvRes.headers.get("location");
+      if ((uvRes.status === 302 || uvRes.status === 307) && location) {
+        return NextResponse.redirect(location, 302);
+      }
+      if (uvRes.ok) {
+        // Some deployments return the audio bytes directly rather than a redirect.
+        return new NextResponse(uvRes.body, {
+          status: 200,
+          headers: { "Content-Type": uvRes.headers.get("content-type") ?? "audio/wav" },
+        });
+      }
+      return NextResponse.json({ error: "Recording not available yet" }, { status: 404 });
     }
 
-    const expiresIn = 3600;
-
-    // If the recording_url is already a full URL (e.g. from an external provider), return it directly
-    if (call.recording_url.startsWith("http://") || call.recording_url.startsWith("https://")) {
-      return NextResponse.json({ url: call.recording_url, expiresIn });
+    // Fallback: an external recording URL saved by another provider.
+    if (call.recording_url?.startsWith("http://") || call.recording_url?.startsWith("https://")) {
+      return NextResponse.redirect(call.recording_url, 302);
     }
 
-    // Otherwise, treat it as a Supabase storage path and create a signed URL
-    const { data: signedUrlData, error: storageError } = await supabase.storage
-      .from("recordings")
-      .createSignedUrl(call.recording_url, expiresIn);
-
-    if (storageError || !signedUrlData?.signedUrl) {
-      return NextResponse.json(
-        { error: "Failed to generate signed URL" },
-        { status: 500 }
-      );
-    }
-
-    return NextResponse.json({ url: signedUrlData.signedUrl, expiresIn });
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "Internal server error";
+    return NextResponse.json({ error: "No recording available" }, { status: 404 });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Internal server error";
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

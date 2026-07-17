@@ -28,6 +28,9 @@ function isPublicRoute(pathname: string): boolean {
   // authenticated — Ultravox calls these server-to-server mid-call with no
   // browser session to speak of.
   if (pathname.startsWith('/api/v1/tools/')) return true;
+  // Cron reconciler — authenticated by CRON_SECRET header inside the route,
+  // not a browser session (a VPS crontab calls it).
+  if (pathname.startsWith('/api/v1/cron/')) return true;
   if (pathname.startsWith('/_next/') || pathname.startsWith('/favicon')) return true;
   return false;
 }

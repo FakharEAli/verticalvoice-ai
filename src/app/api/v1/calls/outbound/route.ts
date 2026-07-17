@@ -191,7 +191,11 @@ export async function POST(request: NextRequest) {
 
     await admin
       .from("calls")
-      .update({ provider_call_id: twilioCall.sid, updated_at: new Date().toISOString() })
+      .update({
+        provider_call_id: twilioCall.sid,
+        ultravox_call_id: ultravoxCall.callId,
+        updated_at: new Date().toISOString(),
+      })
       .eq("id", call.id);
     call.provider_call_id = twilioCall.sid;
 
