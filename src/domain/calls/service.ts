@@ -23,6 +23,7 @@ export interface CallDetail {
   started_at: string;
   ended_at: string | null;
   recording_url: string | null;
+  is_test: boolean;
   created_at: string;
   updated_at: string;
   transcript?: { content: string; segments: Json | null } | null;
@@ -66,11 +67,12 @@ export async function listCalls(
   const pageSize = filters.pageSize ?? 25;
   const offset = (page - 1) * pageSize;
 
+  // Test calls are shown in Call History too, tagged with a Test badge in
+  // the UI — not hidden — so a business owner can verify a test call worked.
   let query = supabase
     .from("calls")
     .select("*", { count: "exact" })
     .eq("tenant_id", tenantId)
-    .eq("is_test", false)
     .order("started_at", { ascending: false })
     .range(offset, offset + pageSize - 1);
 

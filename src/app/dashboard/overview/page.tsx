@@ -19,6 +19,7 @@ import { createServerClient } from "@/lib/database/supabase-server";
 import { getCurrentTenantId } from "@/domain/tenants/current";
 import { getAgentConfig } from "@/domain/agents/service";
 import { LiveCallOrb } from "@/components/shared/live-call-orb";
+import { TestBadge } from "@/components/shared/test-badge";
 import type { Json } from "@/lib/database/types";
 import { OverviewStats } from "./overview-stats";
 
@@ -173,9 +174,8 @@ export default async function OverviewPage() {
       .eq("is_test", false),
     supabase
       .from("calls")
-      .select("id, caller_number, status, duration_seconds, started_at, direction")
+      .select("id, caller_number, status, duration_seconds, started_at, direction, is_test")
       .eq("tenant_id", tenantId)
-      .eq("is_test", false)
       .order("started_at", { ascending: false })
       .limit(8),
     supabase.from("integration_connections").select("provider, status").eq("tenant_id", tenantId),
@@ -321,8 +321,9 @@ export default async function OverviewPage() {
                         {formatCallTime(call.started_at, tenantTimezone)}
                       </span>
                       <div className="min-w-0">
-                        <p className="truncate font-mono text-sm font-medium tabular-nums">
+                        <p className="flex items-center gap-1.5 truncate font-mono text-sm font-medium tabular-nums">
                           {call.caller_number ?? "Unknown number"}
+                          {call.is_test && <TestBadge />}
                         </p>
                         <p className="text-xs capitalize text-muted-foreground">
                           {call.direction}

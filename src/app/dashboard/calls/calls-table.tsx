@@ -6,6 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { TestBadge } from "@/components/shared/test-badge";
 import { cn } from "@/lib/utils";
 import {
   Eye,
@@ -25,6 +26,7 @@ export interface CallRow {
   direction: string;
   /** Normalized evaluation score 0-100, or null when the call has no evaluation. */
   score: number | null;
+  isTest: boolean;
 }
 
 export type DirectionFilter = "all" | "inbound" | "outbound";
@@ -333,8 +335,13 @@ export function CallsTable({ calls, total, page, totalPages, direction, timezone
                             </div>
                           </div>
                         </td>
-                        <td className="whitespace-nowrap px-4 py-3 font-mono text-sm font-medium tabular-nums">
-                          {call.callerNumber ?? "Unknown"}
+                        <td className="whitespace-nowrap px-4 py-3">
+                          <div className="flex items-center gap-2">
+                            <span className="font-mono text-sm font-medium tabular-nums">
+                              {call.callerNumber ?? "Unknown"}
+                            </span>
+                            {call.isTest && <TestBadge />}
+                          </div>
                         </td>
                         <td className="whitespace-nowrap px-4 py-3 font-mono text-sm tabular-nums text-muted-foreground">
                           {formatDuration(call.durationSeconds)}

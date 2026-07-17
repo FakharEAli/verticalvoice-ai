@@ -23,6 +23,7 @@ import {
 import { createServerClient } from "@/lib/database/supabase-server";
 import { getCurrentTenantId } from "@/domain/tenants/current";
 import { getCall } from "@/domain/calls/service";
+import { TestBadge } from "@/components/shared/test-badge";
 import { RecordingPlayer } from "./recording-player";
 
 function NoTenantState() {
@@ -284,6 +285,7 @@ export default async function CallDetailPage({
           <p className="font-mono text-sm text-muted-foreground">Call {call.id}</p>
         </div>
         <div className="flex flex-wrap gap-2">
+          {call.is_test && <TestBadge />}
           {call.outcome?.outcome_type && (
             <Badge variant="outline" className="capitalize">
               {call.outcome.outcome_type.replace(/_/g, " ")}

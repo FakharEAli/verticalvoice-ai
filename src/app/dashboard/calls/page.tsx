@@ -86,6 +86,7 @@ export default async function CallsPage({
     status: call.status,
     direction: call.direction,
     score: scoreByCallId.get(call.id) ?? null,
+    isTest: call.is_test,
   }));
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));

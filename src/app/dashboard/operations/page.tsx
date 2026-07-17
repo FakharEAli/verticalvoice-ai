@@ -25,13 +25,14 @@ import {
 } from "lucide-react";
 import { createServerClient } from "@/lib/database/supabase-server";
 import { getCurrentTenantId } from "@/domain/tenants/current";
+import { TestBadge } from "@/components/shared/test-badge";
 
 /**
  * Test Center's Live Test Call runs through this exact same pipeline as a
  * real customer call, so anything it books (appointments, reservations,
- * leads...) would otherwise show up here indistinguishable from real
- * business data. Filter it out by call_id rather than a per-table flag,
- * since calls.is_test is the single source of truth.
+ * leads...) lands in these same tables. We show it here alongside real data
+ * — tagged with a Test badge (via CallLink) rather than hidden — resolved
+ * by call_id since calls.is_test is the single source of truth.
  */
 async function getTestCallIds(
   supabase: Awaited<ReturnType<typeof createServerClient>>,
@@ -39,10 +40,6 @@ async function getTestCallIds(
 ): Promise<Set<string>> {
   const { data } = await supabase.from("calls").select("id").eq("tenant_id", tenantId).eq("is_test", true);
   return new Set((data ?? []).map((c) => c.id));
-}
-
-function excludeTestCalls<T extends { call_id: string | null }>(rows: T[] | null, testCallIds: Set<string>): T[] {
-  return (rows ?? []).filter((r) => !r.call_id || !testCallIds.has(r.call_id));
 }
 
 type BadgeVariant = "success" | "warning" | "destructive" | "outline";
@@ -84,12 +81,29 @@ function formatMoney(cents: number | null | undefined) {
   return `$${(cents / 100).toLocaleString("en-US", { minimumFractionDigits: 0 })}`;
 }
 
-function CallLink({ callId, children }: { callId: string | null; children: React.ReactNode }) {
-  if (!callId) return <>{children}</>;
-  return (
+function CallLink({
+  callId,
+  testCallIds,
+  children,
+}: {
+  callId: string | null;
+  testCallIds?: Set<string>;
+  children: React.ReactNode;
+}) {
+  const isTest = !!callId && !!testCallIds?.has(callId);
+  const inner = callId ? (
     <Link href={`/dashboard/calls/${callId}`} className="hover:underline">
       {children}
     </Link>
+  ) : (
+    <>{children}</>
+  );
+  if (!isTest) return inner;
+  return (
+    <span className="inline-flex items-center gap-1.5">
+      {inner}
+      <TestBadge />
+    </span>
   );
 }
 
@@ -141,10 +155,10 @@ async function HealthcarePanel({ supabase, tenantId }: { supabase: Awaited<Retur
         .limit(20),
     ]);
 
-  const appointments = excludeTestCalls(appointmentRows, testCallIds).slice(0, 10);
-  const waitlist = excludeTestCalls(waitlistRows, testCallIds).slice(0, 10);
-  const refills = excludeTestCalls(refillRows, testCallIds).slice(0, 10);
-  const insurance = excludeTestCalls(insuranceRows, testCallIds).slice(0, 10);
+  const appointments = (appointmentRows ?? []).slice(0, 10);
+  const waitlist = (waitlistRows ?? []).slice(0, 10);
+  const refills = (refillRows ?? []).slice(0, 10);
+  const insurance = (insuranceRows ?? []).slice(0, 10);
 
   return (
     <div className="grid gap-6 lg:grid-cols-2">
@@ -174,7 +188,7 @@ async function HealthcarePanel({ supabase, tenantId }: { supabase: Awaited<Retur
                   {appointments.map((a) => (
                     <tr key={a.id} className="border-b last:border-0">
                       <td className="py-2 font-medium">
-                        <CallLink callId={a.call_id}>{a.patient_name}</CallLink>
+                        <CallLink testCallIds={testCallIds} callId={a.call_id}>{a.patient_name}</CallLink>
                       </td>
                       <td className="py-2 font-mono text-muted-foreground">{formatDateTime(a.scheduled_at)}</td>
                       <td className="py-2 text-muted-foreground">{a.reason || "—"}</td>
@@ -203,7 +217,10 @@ async function HealthcarePanel({ supabase, tenantId }: { supabase: Awaited<Retur
             waitlist.map((w) => (
               <div key={w.id} className="flex items-center justify-between rounded-lg border p-3">
                 <div>
-                  <p className="font-medium">{w.patient_name}</p>
+                  <p className="flex items-center gap-1.5 font-medium">
+                    {w.patient_name}
+                    {w.call_id && testCallIds.has(w.call_id) && <TestBadge />}
+                  </p>
                   <p className="text-xs text-muted-foreground">
                     Added: <span className="font-mono">{formatDateTime(w.created_at)}</span>
                   </p>
@@ -231,7 +248,7 @@ async function HealthcarePanel({ supabase, tenantId }: { supabase: Awaited<Retur
               <div key={r.id} className="flex items-center justify-between rounded-lg border p-3">
                 <div>
                   <p className="font-medium">
-                    <CallLink callId={r.call_id}>{r.patient_name}</CallLink>
+                    <CallLink testCallIds={testCallIds} callId={r.call_id}>{r.patient_name}</CallLink>
                   </p>
                   <p className="text-xs text-muted-foreground">{r.medication_name}</p>
                 </div>
@@ -258,7 +275,7 @@ async function HealthcarePanel({ supabase, tenantId }: { supabase: Awaited<Retur
               <div key={q.id} className="flex items-center justify-between rounded-lg border p-3">
                 <div>
                   <p className="font-medium">
-                    <CallLink callId={q.call_id}>{q.patient_name}</CallLink>
+                    <CallLink testCallIds={testCallIds} callId={q.call_id}>{q.patient_name}</CallLink>
                   </p>
                   <p className="text-xs text-muted-foreground">{q.insurance_provider}</p>
                 </div>
@@ -307,9 +324,9 @@ async function RestaurantPanel({ supabase, tenantId }: { supabase: Awaited<Retur
         .limit(20),
     ]);
 
-  const reservations = excludeTestCalls(reservationRows, testCallIds).slice(0, 10);
-  const orders = excludeTestCalls(orderRows, testCallIds).slice(0, 10);
-  const cateringLeads = excludeTestCalls(cateringLeadRows, testCallIds).slice(0, 10);
+  const reservations = (reservationRows ?? []).slice(0, 10);
+  const orders = (orderRows ?? []).slice(0, 10);
+  const cateringLeads = (cateringLeadRows ?? []).slice(0, 10);
 
   const menuCount = menuItems?.length ?? 0;
   const lastMenuUpdate = menuItems?.length
@@ -345,7 +362,7 @@ async function RestaurantPanel({ supabase, tenantId }: { supabase: Awaited<Retur
                   {reservations.map((r) => (
                     <tr key={r.id} className="border-b last:border-0">
                       <td className="py-2 font-medium">
-                        <CallLink callId={r.call_id}>{r.guest_name}</CallLink>
+                        <CallLink testCallIds={testCallIds} callId={r.call_id}>{r.guest_name}</CallLink>
                       </td>
                       <td className="py-2 font-mono text-muted-foreground">{r.party_size}</td>
                       <td className="py-2 font-mono text-muted-foreground">{formatDateTime(r.scheduled_at)}</td>
@@ -378,7 +395,7 @@ async function RestaurantPanel({ supabase, tenantId }: { supabase: Awaited<Retur
               <div key={o.id} className="flex items-center justify-between rounded-lg border p-3">
                 <div>
                   <p className="font-mono font-medium">
-                    <CallLink callId={o.call_id}>{o.order_number}</CallLink>
+                    <CallLink testCallIds={testCallIds} callId={o.call_id}>{o.order_number}</CallLink>
                   </p>
                   <p className="text-xs text-muted-foreground">
                     {o.order_type} &middot; {formatMoney(o.total_cents)}
@@ -429,7 +446,7 @@ async function RestaurantPanel({ supabase, tenantId }: { supabase: Awaited<Retur
                 <div key={c.id} className="flex items-center justify-between rounded-lg border p-3">
                   <div>
                     <p className="font-medium">
-                      <CallLink callId={c.call_id}>{c.contact_name}</CallLink>
+                      <CallLink testCallIds={testCallIds} callId={c.call_id}>{c.contact_name}</CallLink>
                     </p>
                     <p className="text-xs text-muted-foreground">
                       {c.event_date ? formatDateTime(c.event_date) : "Date TBD"} &middot;{" "}
@@ -493,9 +510,9 @@ async function RealEstatePanel({ supabase, tenantId }: { supabase: Awaited<Retur
   // maintenance_requests->property_management_units) don't type-check
   // cleanly against the generated Database types at this join depth, so
   // resolve the small number of referenced rows separately and join in JS.
-  const leads = excludeTestCalls(leadRows, testCallIds).slice(0, 10);
-  const showings = excludeTestCalls(showingRows, testCallIds).slice(0, 10);
-  const maintenance = excludeTestCalls(maintenanceRows, testCallIds).slice(0, 10);
+  const leads = (leadRows ?? []).slice(0, 10);
+  const showings = (showingRows ?? []).slice(0, 10);
+  const maintenance = (maintenanceRows ?? []).slice(0, 10);
 
   const listingIds = [...new Set(showings.map((s) => s.listing_id).filter(Boolean))];
   const agentIds = [...new Set(showings.map((s) => s.agent_id).filter((id): id is string => !!id))];
@@ -546,7 +563,7 @@ async function RealEstatePanel({ supabase, tenantId }: { supabase: Awaited<Retur
                   {leads.map((l) => (
                     <tr key={l.id} className="border-b last:border-0">
                       <td className="py-2 font-medium">
-                        <CallLink callId={l.call_id}>
+                        <CallLink testCallIds={testCallIds} callId={l.call_id}>
                           {l.first_name} {l.last_name}
                         </CallLink>
                       </td>
@@ -584,7 +601,7 @@ async function RealEstatePanel({ supabase, tenantId }: { supabase: Awaited<Retur
                 <div key={s.id} className="rounded-lg border p-3">
                   <div className="flex items-center justify-between">
                     <p className="font-medium">
-                      <CallLink callId={s.call_id}>{fullAddress(listing)}</CallLink>
+                      <CallLink testCallIds={testCallIds} callId={s.call_id}>{fullAddress(listing)}</CallLink>
                     </p>
                     <p className="text-xs text-muted-foreground">
                       {agent ? `${agent.first_name} ${agent.last_name[0]}.` : "Unassigned"}
@@ -642,7 +659,7 @@ async function RealEstatePanel({ supabase, tenantId }: { supabase: Awaited<Retur
                   <div key={m.id} className="rounded-lg border p-3">
                     <div className="flex items-center justify-between">
                       <p className="font-medium">
-                        <CallLink callId={m.call_id}>{unit?.address ?? "Unknown property"}</CallLink>
+                        <CallLink testCallIds={testCallIds} callId={m.call_id}>{unit?.address ?? "Unknown property"}</CallLink>
                       </p>
                       {priorityBadge(m.priority)}
                     </div>
