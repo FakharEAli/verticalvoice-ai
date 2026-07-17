@@ -78,12 +78,15 @@ export async function summarizeCall(
   tenantId: string,
   ultravoxSummary?: string
 ): Promise<void> {
-  const { data: existing } = await supabase
-    .from("call_summaries")
-    .select("id")
-    .eq("call_id", callId)
-    .maybeSingle();
-  if (existing) return;
+  // call_summaries and call_outcomes are guarded independently so a missing
+  // outcome always self-heals on the next reconcile — even if the summary
+  // already exists. (A single shared early-return once left outcomes blank
+  // when their insert failed after the summary's succeeded.)
+  const [{ data: existingSummary }, { data: existingOutcome }] = await Promise.all([
+    supabase.from("call_summaries").select("id").eq("call_id", callId).maybeSingle(),
+    supabase.from("call_outcomes").select("id").eq("call_id", callId).maybeSingle(),
+  ]);
+  if (existingSummary && existingOutcome) return;
 
   const { data: call } = await supabase
     .from("calls")
@@ -122,24 +125,28 @@ export async function summarizeCall(
       : `${directionText}, ${durationText}. No structured actions were taken during this call.`;
   const summary = ultravoxSummary?.trim() ? ultravoxSummary.trim() : heuristicSummary;
 
-  await supabase.from("call_summaries").insert({
-    call_id: callId,
-    tenant_id: tenantId,
-    summary,
-    key_points: keyPoints,
-    action_items: actionItems,
-    sentiment,
-    model: ultravoxSummary?.trim() ? "ultravox" : "heuristic-v1",
-  });
+  if (!existingSummary) {
+    await supabase.from("call_summaries").insert({
+      call_id: callId,
+      tenant_id: tenantId,
+      summary,
+      key_points: keyPoints,
+      action_items: actionItems,
+      sentiment,
+      model: ultravoxSummary?.trim() ? "ultravox" : "heuristic-v1",
+    });
+  }
 
-  await supabase.from("call_outcomes").insert({
-    call_id: callId,
-    tenant_id: tenantId,
-    outcome_type: outcomeType,
-    disposition,
-    notes: actionItems.length > 0 ? actionItems.join("; ") : null,
-    follow_up_at:
-      actionItems.length > 0 ? new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString() : null,
-    metadata: { tool_run_count: toolRuns.length },
-  });
+  if (!existingOutcome) {
+    await supabase.from("call_outcomes").insert({
+      call_id: callId,
+      tenant_id: tenantId,
+      outcome_type: outcomeType,
+      disposition,
+      notes: actionItems.length > 0 ? actionItems.join("; ") : null,
+      follow_up_at:
+        actionItems.length > 0 ? new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString() : null,
+      metadata: { tool_run_count: toolRuns.length },
+    });
+  }
 }

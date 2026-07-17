@@ -121,7 +121,11 @@ const VERTICAL_TINT = {
 
 async function HealthcarePanel({ supabase, tenantId }: { supabase: Awaited<ReturnType<typeof createServerClient>>; tenantId: string }) {
   const t = VERTICAL_TINT.healthcare;
-  const nowIso = new Date().toISOString();
+  // "Upcoming" window starts 12h in the past so a booking made for a time
+  // that has just passed today still shows here (and covers timezone skew).
+  const windowStart = new Date();
+  windowStart.setHours(windowStart.getHours() - 12);
+  const sinceIso = windowStart.toISOString();
 
   const [testCallIds, { data: appointmentRows }, { data: waitlistRows }, { data: refillRows }, { data: insuranceRows }] =
     await Promise.all([
@@ -131,7 +135,7 @@ async function HealthcarePanel({ supabase, tenantId }: { supabase: Awaited<Retur
         .select("id, call_id, patient_name, scheduled_at, reason, status")
         .eq("tenant_id", tenantId)
         .neq("status", "cancelled")
-        .gte("scheduled_at", nowIso)
+        .gte("scheduled_at", sinceIso)
         .order("scheduled_at", { ascending: true })
         .limit(20),
       supabase
@@ -293,7 +297,11 @@ async function HealthcarePanel({ supabase, tenantId }: { supabase: Awaited<Retur
 
 async function RestaurantPanel({ supabase, tenantId }: { supabase: Awaited<ReturnType<typeof createServerClient>>; tenantId: string }) {
   const t = VERTICAL_TINT.restaurant;
-  const nowIso = new Date().toISOString();
+  // "Upcoming" window starts 12h in the past so a booking made for a time
+  // that has just passed today still shows here (and covers timezone skew).
+  const windowStart = new Date();
+  windowStart.setHours(windowStart.getHours() - 12);
+  const sinceIso = windowStart.toISOString();
 
   const [testCallIds, { data: reservationRows }, { data: orderRows }, { data: menuItems }, { data: cateringLeadRows }] =
     await Promise.all([
@@ -303,7 +311,7 @@ async function RestaurantPanel({ supabase, tenantId }: { supabase: Awaited<Retur
         .select("id, call_id, guest_name, party_size, scheduled_at, status, special_requests")
         .eq("tenant_id", tenantId)
         .neq("status", "cancelled")
-        .gte("scheduled_at", nowIso)
+        .gte("scheduled_at", sinceIso)
         .order("scheduled_at", { ascending: true })
         .limit(20),
       supabase
@@ -473,7 +481,11 @@ function fullAddress(listing: { address_line1: string; city: string; state: stri
 
 async function RealEstatePanel({ supabase, tenantId }: { supabase: Awaited<ReturnType<typeof createServerClient>>; tenantId: string }) {
   const t = VERTICAL_TINT.realestate;
-  const nowIso = new Date().toISOString();
+  // "Upcoming" window starts 12h in the past so a booking made for a time
+  // that has just passed today still shows here (and covers timezone skew).
+  const windowStart = new Date();
+  windowStart.setHours(windowStart.getHours() - 12);
+  const sinceIso = windowStart.toISOString();
 
   const [testCallIds, { data: leadRows }, { data: showingRows }, { data: listings }, { data: maintenanceRows }] =
     await Promise.all([
@@ -488,7 +500,7 @@ async function RealEstatePanel({ supabase, tenantId }: { supabase: Awaited<Retur
         .from("showings")
         .select("id, call_id, scheduled_at, status, listing_id, agent_id")
         .eq("tenant_id", tenantId)
-        .gte("scheduled_at", nowIso)
+        .gte("scheduled_at", sinceIso)
         .order("scheduled_at", { ascending: true })
         .limit(20),
       supabase

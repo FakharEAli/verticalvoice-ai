@@ -3,6 +3,7 @@ import { createAdminClient } from '@/lib/database/supabase-admin';
 import { validateTwilioSignature } from '@/lib/webhooks/signature';
 import { createUltravoxCall } from '@/lib/telephony/ultravox';
 import { buildSelectedTools } from '@/lib/telephony/ultravox-tools';
+import { withCurrentDateContext } from '@/lib/telephony/prompt-context';
 import { logger } from '@/lib/observability/logger';
 import '@/industries';
 import { getIndustryPack } from '@/industries/core/registry';
@@ -106,12 +107,15 @@ export async function POST(request: NextRequest) {
 
     const voiceId = snapshot?.voice?.voice_id ?? null;
 
-    const { data: tenantRow } = await supabase
-      .from('tenants')
-      .select('industry')
-      .eq('id', tenantId)
-      .single();
+    const [{ data: tenantRow }, { data: bizProfile }] = await Promise.all([
+      supabase.from('tenants').select('industry').eq('id', tenantId).single(),
+      supabase.from('business_profiles').select('timezone').eq('tenant_id', tenantId).maybeSingle(),
+    ]);
     const industry = tenantRow?.industry as IndustryId | undefined;
+
+    // Give the agent the current date/time so "today"/"tonight" resolve to
+    // real (future) dates instead of a hallucinated past date.
+    const datedSystemPrompt = withCurrentDateContext(systemPrompt, bizProfile?.timezone);
 
     // Record the call row first so we have an internal call.id to scope
     // this call's tools to before creating the Ultravox call.
@@ -141,7 +145,7 @@ export async function POST(request: NextRequest) {
         : undefined;
 
     // Create the Ultravox call bridged to this Twilio call
-    const ultravoxCall = await createUltravoxCall(systemPrompt, voiceId, selectedTools);
+    const ultravoxCall = await createUltravoxCall(datedSystemPrompt, voiceId, selectedTools);
 
     if (!ultravoxCall.joinUrl) {
       logger.error('twilio-voice-webhook: Ultravox call created without joinUrl', {

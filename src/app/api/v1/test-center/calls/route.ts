@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createServerClient } from "@/lib/database/supabase-server";
 import { createAdminClient } from "@/lib/database/supabase-admin";
 import { getCurrentTenantId } from "@/domain/tenants/current";
+import { reconcileActiveCalls } from "@/lib/calls/reconcile";
 
 /**
  * Lists this tenant's Test Center calls (is_test=true) — recording,
@@ -18,6 +19,15 @@ export async function GET() {
 
   const tenantId = await getCurrentTenantId(user.id);
   if (!tenantId) return NextResponse.json({ error: "No tenant found for this account" }, { status: 403 });
+
+  // Reconcile this tenant's just-ended calls on the spot so the list (and the
+  // call detail / operations views it links to) reflect the outcome within
+  // seconds of the user checking, rather than waiting for the 1-min cron.
+  try {
+    await reconcileActiveCalls(createAdminClient(), tenantId);
+  } catch {
+    // Non-fatal — the cron will still catch it; never block the listing.
+  }
 
   const { data: calls, error } = await supabase
     .from("calls")

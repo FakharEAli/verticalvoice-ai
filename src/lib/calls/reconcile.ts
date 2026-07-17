@@ -132,25 +132,34 @@ export async function reconcileCall(
  * a catch-up for any partial write. Called by the cron reconciler.
  */
 export async function reconcileActiveCalls(
-  supabase: SupabaseClient<Database>
+  supabase: SupabaseClient<Database>,
+  tenantId?: string
 ): Promise<{ checked: number; updated: number }> {
   const sixHoursAgo = new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString();
 
+  const activeQuery = supabase
+    .from("calls")
+    .select("id, tenant_id, ultravox_call_id, status, recording_url")
+    .not("ultravox_call_id", "is", null)
+    .in("status", ["ringing", "initiated", "initiating", "in_progress"])
+    .limit(200);
+  const incompleteQuery = supabase
+    .from("calls")
+    .select("id, tenant_id, ultravox_call_id, status, recording_url")
+    .not("ultravox_call_id", "is", null)
+    .eq("status", "completed")
+    .is("recording_url", null)
+    .gte("started_at", sixHoursAgo)
+    .limit(200);
+
+  if (tenantId) {
+    activeQuery.eq("tenant_id", tenantId);
+    incompleteQuery.eq("tenant_id", tenantId);
+  }
+
   const [{ data: active }, { data: recentIncomplete }] = await Promise.all([
-    supabase
-      .from("calls")
-      .select("id, tenant_id, ultravox_call_id, status, recording_url")
-      .not("ultravox_call_id", "is", null)
-      .in("status", ["ringing", "initiated", "initiating", "in_progress"])
-      .limit(200),
-    supabase
-      .from("calls")
-      .select("id, tenant_id, ultravox_call_id, status, recording_url")
-      .not("ultravox_call_id", "is", null)
-      .eq("status", "completed")
-      .is("recording_url", null)
-      .gte("started_at", sixHoursAgo)
-      .limit(200),
+    activeQuery,
+    incompleteQuery,
   ]);
 
   const byId = new Map<string, ReconcilableCall>();

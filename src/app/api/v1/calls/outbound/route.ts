@@ -4,6 +4,7 @@ import { createAdminClient } from "@/lib/database/supabase-admin";
 import { getCurrentTenantId } from "@/domain/tenants/current";
 import { createUltravoxCall } from "@/lib/telephony/ultravox";
 import { buildSelectedTools } from "@/lib/telephony/ultravox-tools";
+import { withCurrentDateContext } from "@/lib/telephony/prompt-context";
 import { placeOutboundCall } from "@/lib/telephony/twilio";
 import { z } from "zod";
 import { phoneSchema } from "@/lib/validation/schemas";
@@ -98,7 +99,7 @@ export async function POST(request: NextRequest) {
 
     const { data: businessProfile } = await admin
       .from("business_profiles")
-      .select("business_name")
+      .select("business_name, timezone")
       .eq("tenant_id", tenant_id)
       .single();
 
@@ -138,7 +139,8 @@ export async function POST(request: NextRequest) {
 
     const businessName = businessProfile?.business_name ?? "the business";
     const filledScript = fillTemplate(callType.promptTemplate, variables);
-    const systemPrompt = `You are an AI phone assistant calling on behalf of ${businessName}. This is an outbound ${callType.category} call. ${filledScript} Speak naturally and conversationally, keep the call concise, and end politely. If the person asks to not be called again, acknowledge that respectfully and end the call.`;
+    const baseSystemPrompt = `You are an AI phone assistant calling on behalf of ${businessName}. This is an outbound ${callType.category} call. ${filledScript} Speak naturally and conversationally, keep the call concise, and end politely. If the person asks to not be called again, acknowledge that respectfully and end the call.`;
+    const systemPrompt = withCurrentDateContext(baseSystemPrompt, businessProfile?.timezone);
 
     // Insert the call row first (provider_call_id is nullable) so we have
     // our internal call.id to scope this call's tools to before Ultravox
