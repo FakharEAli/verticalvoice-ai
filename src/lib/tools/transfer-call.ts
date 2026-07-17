@@ -7,7 +7,7 @@ import type { ToolHandler, ToolHandlerMap } from "./types";
  * escalation "get me a human" tool) — one shared implementation covers all
  * three verticals instead of duplicating it per industry.
  */
-const handleTransferCall: ToolHandler = async ({ supabase, tenantId, callId, input }) => {
+const handleTransferCall: ToolHandler = async ({ supabase, tenantId, callId, input, isTest }) => {
   const reason = typeof input.reason === "string" ? input.reason : "Caller requested a human.";
   // Different packs name this field differently (healthcare: priority,
   // restaurant/real-estate: no explicit field) — check both, default normal.
@@ -47,13 +47,15 @@ const handleTransferCall: ToolHandler = async ({ supabase, tenantId, callId, inp
     data: { reason, urgency, transfer_number: transferNumber },
   });
 
-  await notifyStaff(supabase, {
-    tenantId,
-    type: "escalation",
-    title: urgency === "emergency" ? "Urgent: call needs a human now" : "Call escalated to a human",
-    body: reason,
-    data: { call_id: callId, urgency },
-  });
+  if (!isTest) {
+    await notifyStaff(supabase, {
+      tenantId,
+      type: "escalation",
+      title: urgency === "emergency" ? "Urgent: call needs a human now" : "Call escalated to a human",
+      body: reason,
+      data: { call_id: callId, urgency },
+    });
+  }
 
   if (transferNumber && call?.provider_call_id) {
     try {

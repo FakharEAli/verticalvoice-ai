@@ -70,6 +70,7 @@ export async function listCalls(
     .from("calls")
     .select("*", { count: "exact" })
     .eq("tenant_id", tenantId)
+    .eq("is_test", false)
     .order("started_at", { ascending: false })
     .range(offset, offset + pageSize - 1);
 

@@ -5,6 +5,7 @@ interface BuildSelectedToolsOptions {
   callId: string;
   tenantId: string;
   industry: IndustryPack["id"];
+  isTest?: boolean;
 }
 
 function jsonSchemaType(type: ToolParameter["type"]): string {
@@ -67,6 +68,7 @@ export function buildSelectedTools(pack: IndustryPack, opts: BuildSelectedToolsO
     call_id: opts.callId,
     tenant_id: opts.tenantId,
     industry: opts.industry,
+    is_test: opts.isTest ?? false,
   });
 
   return pack.tools.map((binding) => toUltravoxTool(binding, baseUrl, token));

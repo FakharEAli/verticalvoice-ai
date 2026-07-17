@@ -6,6 +6,7 @@ export interface ToolTokenPayload {
   call_id: string;
   tenant_id: string;
   industry: IndustryId;
+  is_test: boolean;
 }
 
 /**
@@ -43,6 +44,7 @@ export function verifyToolToken(request: NextRequest): ToolTokenPayload | null {
       call_id: decoded.call_id,
       tenant_id: decoded.tenant_id,
       industry: decoded.industry as IndustryId,
+      is_test: decoded.is_test === true,
     };
   } catch {
     return null;

@@ -64,6 +64,7 @@ export async function GET(request: NextRequest) {
       .select("*")
       .eq("tenant_id", parsed.data.tenant_id)
       .eq("status", "completed")
+      .eq("is_test", false)
       .gte("created_at", fromDate)
       .lte("created_at", toDate);
 

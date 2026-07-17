@@ -47,6 +47,11 @@ export async function POST(request: NextRequest) {
   const toNumber = params.To;
   const fromNumber = params.From;
   const callSid = params.CallSid;
+  // Set by the Test Center's Live Test Call feature (Twilio Voice SDK
+  // device.connect({params: {..., IsTestCall: 'true'}})) — Twilio forwards
+  // Client custom params straight through to this webhook. Absent for any
+  // real inbound PSTN call, so this only ever fires for genuine test calls.
+  const isTestCall = params.IsTestCall === 'true';
 
   if (!toNumber || !callSid) {
     return sayAndHangup('We are unable to process this call right now.');
@@ -122,6 +127,7 @@ export async function POST(request: NextRequest) {
           called_number: toNumber,
           started_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
+          is_test: isTestCall,
         },
         { onConflict: 'provider_call_id' }
       )
@@ -131,7 +137,7 @@ export async function POST(request: NextRequest) {
     const pack = industry ? getIndustryPack(industry) : undefined;
     const selectedTools =
       pack && callRow
-        ? buildSelectedTools(pack, { callId: callRow.id, tenantId, industry: pack.id })
+        ? buildSelectedTools(pack, { callId: callRow.id, tenantId, industry: pack.id, isTest: isTestCall })
         : undefined;
 
     // Create the Ultravox call bridged to this Twilio call

@@ -210,12 +210,14 @@ export default async function AnalyticsPage({
       .from("calls")
       .select("id, status, duration_seconds, started_at")
       .eq("tenant_id", tenantId)
+      .eq("is_test", false)
       .gte("started_at", range.start.toISOString())
       .lt("started_at", range.end.toISOString()),
     supabase
       .from("calls")
       .select("status")
       .eq("tenant_id", tenantId)
+      .eq("is_test", false)
       .gte("started_at", prevRange.start.toISOString())
       .lt("started_at", prevRange.end.toISOString()),
   ]);
