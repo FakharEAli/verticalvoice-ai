@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import {
   Phone,
+  PhoneOff,
   Play,
   CheckCircle2,
   XCircle,
@@ -149,10 +150,81 @@ const resultLabel: Record<Scenario["result"], string> = {
 
 // --- Page ---
 
+type BrowserCallStatus = "idle" | "connecting" | "ringing" | "in-call" | "ended" | "error";
+
 export default function TestCenterPage() {
   const [callerInput, setCallerInput] = useState("");
   const [analyzing, setAnalyzing] = useState(false);
   const [result, setResult] = useState<AnalyzeResult | null>(null);
+
+  const [callStatus, setCallStatus] = useState<BrowserCallStatus>("idle");
+  const [callDuration, setCallDuration] = useState(0);
+  const [callError, setCallError] = useState<string | null>(null);
+  const deviceRef = useRef<import("@twilio/voice-sdk").Device | null>(null);
+  const activeCallRef = useRef<import("@twilio/voice-sdk").Call | null>(null);
+  const durationIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      activeCallRef.current?.disconnect();
+      deviceRef.current?.destroy();
+      if (durationIntervalRef.current) clearInterval(durationIntervalRef.current);
+    };
+  }, []);
+
+  async function handleStartBrowserCall() {
+    setCallError(null);
+    setCallStatus("connecting");
+    try {
+      const { Device } = await import("@twilio/voice-sdk");
+
+      const res = await fetch("/api/v1/telephony/browser-token");
+      const body = await res.json();
+      if (!res.ok) {
+        setCallStatus("error");
+        setCallError(body.error ?? "Failed to get a calling token.");
+        return;
+      }
+
+      const device = new Device(body.token, { logLevel: "error" });
+      deviceRef.current = device;
+
+      const call = await device.connect({ params: { To: body.toNumber } });
+      activeCallRef.current = call;
+
+      call.on("ringing", () => setCallStatus("ringing"));
+      call.on("accept", () => {
+        setCallStatus("in-call");
+        setCallDuration(0);
+        durationIntervalRef.current = setInterval(() => {
+          setCallDuration((d) => d + 1);
+        }, 1000);
+      });
+      call.on("disconnect", () => {
+        setCallStatus("ended");
+        if (durationIntervalRef.current) clearInterval(durationIntervalRef.current);
+      });
+      call.on("cancel", () => setCallStatus("ended"));
+      call.on("reject", () => setCallStatus("ended"));
+      call.on("error", (err: Error) => {
+        setCallStatus("error");
+        setCallError(err.message);
+      });
+    } catch (err) {
+      setCallStatus("error");
+      setCallError(err instanceof Error ? err.message : "Failed to start the call.");
+    }
+  }
+
+  function handleHangUp() {
+    activeCallRef.current?.disconnect();
+  }
+
+  function formatDuration(seconds: number): string {
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${m}:${s.toString().padStart(2, "0")}`;
+  }
 
   async function handleAnalyze() {
     const text = callerInput.trim();
@@ -271,42 +343,57 @@ export default function TestCenterPage() {
           </CardContent>
         </Card>
 
-        {/* Test Call */}
+        {/* Live Browser Test Call */}
         <Card>
           <CardHeader>
-            <CardTitle>Test Call</CardTitle>
+            <CardTitle>Live Test Call</CardTitle>
             <CardDescription>
-              Initiate a live test call to evaluate your agent.
+              Call your agent directly from this browser — a real call through your
+              actual phone number and voice agent, no phone required.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="flex gap-2">
-              <Input placeholder="Phone number for test call" />
-              <Button className="gap-2 shrink-0">
+            {callStatus === "idle" || callStatus === "ended" || callStatus === "error" ? (
+              <Button className="w-full gap-2" onClick={handleStartBrowserCall}>
                 <Phone className="size-4" />
-                Initiate Test Call
+                Start Live Test Call
               </Button>
-            </div>
+            ) : (
+              <Button
+                variant="destructive"
+                className="w-full gap-2"
+                onClick={handleHangUp}
+              >
+                <PhoneOff className="size-4" />
+                Hang Up
+              </Button>
+            )}
 
             <Separator />
 
-            <div className="space-y-2">
-              <p className="text-sm font-medium">Last Test Call</p>
-              <div className="rounded-md border p-3 space-y-1">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">Time</span>
-                  <span>2 hours ago</span>
-                </div>
+            <div className="rounded-md border p-3 space-y-1">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">Status</span>
+                <span className="font-medium capitalize">
+                  {callStatus === "in-call" ? "Connected" : callStatus.replace("-", " ")}
+                </span>
+              </div>
+              {callStatus === "in-call" && (
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-muted-foreground">Duration</span>
-                  <span>1:23</span>
+                  <span>{formatDuration(callDuration)}</span>
                 </div>
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">Score</span>
-                  <span className="font-semibold">91/100</span>
-                </div>
-              </div>
+              )}
+              {callStatus === "error" && callError && (
+                <p className="text-sm text-destructive">{callError}</p>
+              )}
             </div>
+
+            <p className="text-xs text-muted-foreground">
+              Your browser will ask for microphone access. This routes through your
+              real Twilio number and the same code path a real caller hits — just
+              without dialing a phone.
+            </p>
           </CardContent>
         </Card>
       </div>
