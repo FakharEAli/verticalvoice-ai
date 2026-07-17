@@ -1,20 +1,17 @@
-import { createHmac, randomBytes } from "crypto";
-
-function base64url(input: Buffer | string): string {
-  return Buffer.from(input)
-    .toString("base64")
-    .replace(/\+/g, "-")
-    .replace(/\//g, "_")
-    .replace(/=+$/, "");
-}
+import jwt from "jsonwebtoken";
 
 /**
- * Hand-rolled Twilio Access Token (a JWT in Twilio's "twilio-fpa" format)
- * granting Voice capability for the given TwiML Application. Avoids adding
- * the full server-side `twilio` SDK just for token signing — same rationale
- * as src/lib/webhooks/signature.ts using raw crypto instead of a library.
+ * Twilio Access Token (a JWT in Twilio's "twilio-fpa" format) granting Voice
+ * capability for the given TwiML Application, so a browser can place an
+ * outgoing call via the Twilio Voice SDK.
  *
  * https://www.twilio.com/docs/iam/access-tokens
+ *
+ * Signed with `jsonwebtoken` rather than hand-rolled HMAC — a hand-rolled
+ * version was tried first and Twilio's signaling server rejected it with
+ * "JWT signature validation failed" (code 31202), confirmed via live
+ * browser console logs against production. Using a standard, well-tested
+ * signing library removes that entire class of encoding bugs.
  */
 export function createVoiceAccessToken(identity: string): string {
   const accountSid = process.env.TWILIO_ACCOUNT_SID;
@@ -28,16 +25,8 @@ export function createVoiceAccessToken(identity: string): string {
     );
   }
 
-  const header = { typ: "JWT", alg: "HS256", cty: "twilio-fpa;v=1" };
-
-  const now = Math.floor(Date.now() / 1000);
-  const ttlSeconds = 3600;
-
   const payload = {
-    jti: `${apiKeySid}-${now}-${randomBytes(4).toString("hex")}`,
-    iss: apiKeySid,
-    sub: accountSid,
-    exp: now + ttlSeconds,
+    jti: `${apiKeySid}-${Math.floor(Date.now() / 1000)}`,
     grants: {
       identity,
       voice: {
@@ -47,13 +36,11 @@ export function createVoiceAccessToken(identity: string): string {
     },
   };
 
-  const encodedHeader = base64url(JSON.stringify(header));
-  const encodedPayload = base64url(JSON.stringify(payload));
-  const signature = base64url(
-    createHmac("sha256", apiKeySecret)
-      .update(`${encodedHeader}.${encodedPayload}`)
-      .digest()
-  );
-
-  return `${encodedHeader}.${encodedPayload}.${signature}`;
+  return jwt.sign(payload, apiKeySecret, {
+    algorithm: "HS256",
+    issuer: apiKeySid,
+    subject: accountSid,
+    expiresIn: 3600,
+    header: { cty: "twilio-fpa;v=1" } as jwt.JwtHeader,
+  });
 }
