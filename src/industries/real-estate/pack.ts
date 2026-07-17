@@ -14,6 +14,7 @@ import type {
   EvaluationScenario,
   DemoFixtureSet,
   PromptFragmentSet,
+  OutboundCallTypeDefinition,
 } from "@/industries/core/industry-pack";
 
 // ─── Onboarding Zod Schema ─────────────────────────────────────────────────
@@ -1385,6 +1386,76 @@ const defaults: IndustryDefaults = {
   currency: "USD",
 };
 
+// ─── Outbound Call Types ────────────────────────────────────────────────────
+
+const outboundCallTypes: OutboundCallTypeDefinition[] = [
+  {
+    id: "lead_outreach",
+    name: "New Lead Outreach",
+    description: "Initial follow-up call to a new lead who inquired about a property online or by form.",
+    category: "outreach",
+    promptTemplate:
+      "You are calling {{leadName}} on behalf of {{agentName}} at {{agencyName}}. They recently inquired about the property at {{propertyAddress}}. Introduce yourself warmly, reference the specific property they inquired about, thank them for their interest, and offer to answer any questions they have or help schedule a showing. Keep the tone friendly, low-pressure, and helpful.",
+    variables: [
+      { name: "leadName", label: "Lead Name", type: "string", required: true, description: "Full name of the lead being called." },
+      { name: "propertyAddress", label: "Property Address", type: "string", required: true, description: "Address of the property the lead inquired about." },
+      { name: "agentName", label: "Agent Name", type: "string", required: true, description: "Name of the agent the AI is representing." },
+      { name: "agencyName", label: "Agency Name", type: "string", required: true, description: "Name of the real estate agency." },
+    ],
+    requiresConsent: false,
+    maxAttempts: 2,
+  },
+  {
+    id: "showing_reminder",
+    name: "Showing Reminder",
+    description: "Remind a client of an upcoming property showing.",
+    category: "reminder",
+    promptTemplate:
+      "You are calling {{clientName}} on behalf of {{agentName}} to remind them of their upcoming property showing at {{propertyAddress}} on {{showingDate}} at {{showingTime}}. Confirm they still plan to attend, offer directions or parking guidance if asked, and let them know they can call back to reschedule if needed.",
+    variables: [
+      { name: "clientName", label: "Client Name", type: "string", required: true, description: "Full name of the client being reminded." },
+      { name: "propertyAddress", label: "Property Address", type: "string", required: true, description: "Address of the property being shown." },
+      { name: "showingDate", label: "Showing Date", type: "date", required: true, description: "Date of the scheduled showing." },
+      { name: "showingTime", label: "Showing Time", type: "time", required: true, description: "Time of the scheduled showing." },
+      { name: "agentName", label: "Agent Name", type: "string", required: true, description: "Name of the agent conducting the showing." },
+    ],
+    requiresConsent: false,
+    maxAttempts: 2,
+  },
+  {
+    id: "hot_deal_alert",
+    name: "Hot Deal Alert",
+    description: "Notify a client about a new listing matching their saved criteria or a price drop on a property they were watching.",
+    category: "alert",
+    promptTemplate:
+      "You are calling {{clientName}} on behalf of {{agentName}} at {{agencyName}} with a time-sensitive update on {{propertyAddress}}: {{dealDetails}}. Explain why this matches what they've been looking for, gauge their interest, and offer to schedule a showing right away if they'd like to see it before it's gone.",
+    variables: [
+      { name: "clientName", label: "Client Name", type: "string", required: true, description: "Full name of the client being alerted." },
+      { name: "propertyAddress", label: "Property Address", type: "string", required: true, description: "Address of the property with the new deal." },
+      { name: "dealDetails", label: "Deal Details", type: "string", required: true, description: "Description of the deal, e.g. \"just listed\" or \"price reduced to $450,000\"." },
+      { name: "agentName", label: "Agent Name", type: "string", required: true, description: "Name of the agent the AI is representing." },
+      { name: "agencyName", label: "Agency Name", type: "string", required: true, description: "Name of the real estate agency." },
+    ],
+    requiresConsent: true,
+    maxAttempts: 1,
+  },
+  {
+    id: "post_showing_follow_up",
+    name: "Post-Showing Follow-Up",
+    description: "Check in after a showing to gauge interest and answer follow-up questions.",
+    category: "outreach",
+    promptTemplate:
+      "You are calling {{clientName}} on behalf of {{agentName}} to follow up after their recent showing at {{propertyAddress}}. Ask what they thought of the property, listen for any concerns or questions, and offer next steps such as scheduling a second showing, submitting an offer, or continuing the search if it wasn't the right fit.",
+    variables: [
+      { name: "clientName", label: "Client Name", type: "string", required: true, description: "Full name of the client being followed up with." },
+      { name: "propertyAddress", label: "Property Address", type: "string", required: true, description: "Address of the property that was shown." },
+      { name: "agentName", label: "Agent Name", type: "string", required: true, description: "Name of the agent conducting the follow-up." },
+    ],
+    requiresConsent: false,
+    maxAttempts: 2,
+  },
+];
+
 // ─── Export the Pack ────────────────────────────────────────────────────────
 
 export const realEstatePack: IndustryPack = {
@@ -1406,4 +1477,5 @@ export const realEstatePack: IndustryPack = {
   evaluationSuite,
   demoFixtures,
   promptFragments,
+  outboundCallTypes,
 };

@@ -1,14 +1,25 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@/lib/database/supabase-server";
+import { createAdminClient } from "@/lib/database/supabase-admin";
+import { getCurrentTenantId } from "@/domain/tenants/current";
+import { createUltravoxCall } from "@/lib/telephony/ultravox";
+import { placeOutboundCall } from "@/lib/telephony/twilio";
 import { z } from "zod";
-import { phoneSchema, uuidSchema } from "@/lib/validation/schemas";
+import { phoneSchema } from "@/lib/validation/schemas";
+import "@/industries";
+import { getIndustryPack } from "@/industries/core/registry";
 
 const outboundCallSchema = z.object({
-  tenant_id: uuidSchema,
   to_number: phoneSchema,
-  from_number: phoneSchema.optional(),
-  agent_id: uuidSchema.optional(),
+  call_type_id: z.string().min(1),
+  variables: z.record(z.string(), z.string()).default({}),
 });
+
+function fillTemplate(template: string, variables: Record<string, string>): string {
+  return template.replace(/\{\{(\w+)\}\}/g, (match, name: string) =>
+    Object.prototype.hasOwnProperty.call(variables, name) ? variables[name] : match
+  );
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -29,22 +40,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { tenant_id, to_number, from_number, agent_id } = parsed.data;
+    const { to_number, call_type_id, variables } = parsed.data;
 
-    // Verify tenant membership
-    const { data: membership } = await supabase
-      .from("tenant_members")
-      .select("tenant_id")
-      .eq("user_id", user.id)
-      .eq("tenant_id", tenant_id)
-      .single();
-
-    if (!membership) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    const tenant_id = await getCurrentTenantId(user.id);
+    if (!tenant_id) {
+      return NextResponse.json({ error: "No tenant found for this account" }, { status: 403 });
     }
 
-    // Verify tenant has allow_outbound in policy_settings
-    const { data: policy } = await supabase
+    const admin = createAdminClient();
+
+    const { data: policy } = await admin
       .from("policy_settings")
       .select("allow_outbound")
       .eq("tenant_id", tenant_id)
@@ -52,21 +57,117 @@ export async function POST(request: NextRequest) {
 
     if (!policy?.allow_outbound) {
       return NextResponse.json(
-        { error: "Outbound calls are not enabled for this tenant" },
+        { error: "Outbound calling is not enabled for this tenant. Enable it first." },
         { status: 403 }
       );
     }
 
-    // Create call record with status 'initiating'
-    const { data: call, error: insertError } = await supabase
+    const { data: tenant } = await admin
+      .from("tenants")
+      .select("industry")
+      .eq("id", tenant_id)
+      .single();
+
+    if (!tenant) {
+      return NextResponse.json({ error: "Tenant not found" }, { status: 404 });
+    }
+
+    const pack = getIndustryPack(tenant.industry as "healthcare" | "restaurant" | "real_estate");
+    if (!pack) {
+      return NextResponse.json({ error: `No industry pack found for: ${tenant.industry}` }, { status: 400 });
+    }
+
+    const callType = pack.outboundCallTypes.find((t) => t.id === call_type_id);
+    if (!callType) {
+      return NextResponse.json(
+        { error: `Unknown call_type_id "${call_type_id}" for industry ${tenant.industry}` },
+        { status: 400 }
+      );
+    }
+
+    const missingVars = callType.variables
+      .filter((v) => v.required && !variables[v.name]?.trim())
+      .map((v) => v.name);
+    if (missingVars.length > 0) {
+      return NextResponse.json(
+        { error: `Missing required variables: ${missingVars.join(", ")}` },
+        { status: 400 }
+      );
+    }
+
+    const { data: businessProfile } = await admin
+      .from("business_profiles")
+      .select("business_name")
+      .eq("tenant_id", tenant_id)
+      .single();
+
+    const { data: phoneNumber } = await admin
+      .from("phone_numbers")
+      .select("number")
+      .eq("tenant_id", tenant_id)
+      .eq("status", "active")
+      .limit(1)
+      .maybeSingle();
+
+    if (!phoneNumber) {
+      return NextResponse.json(
+        { error: "This tenant has no active phone number to call from." },
+        { status: 400 }
+      );
+    }
+
+    const { data: activeConfig } = await admin
+      .from("active_agent_configs")
+      .select("agent_config_version_id")
+      .eq("tenant_id", tenant_id)
+      .order("activated_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    let voiceId: string | null = null;
+    if (activeConfig) {
+      const { data: version } = await admin
+        .from("agent_config_versions")
+        .select("snapshot")
+        .eq("id", activeConfig.agent_config_version_id)
+        .single();
+      const snapshot = version?.snapshot as { voice?: { voice_id?: string } | null } | null;
+      voiceId = snapshot?.voice?.voice_id ?? null;
+    }
+
+    const businessName = businessProfile?.business_name ?? "the business";
+    const filledScript = fillTemplate(callType.promptTemplate, variables);
+    const systemPrompt = `You are an AI phone assistant calling on behalf of ${businessName}. This is an outbound ${callType.category} call. ${filledScript} Speak naturally and conversationally, keep the call concise, and end politely. If the person asks to not be called again, acknowledge that respectfully and end the call.`;
+
+    const ultravoxCall = await createUltravoxCall(systemPrompt, voiceId);
+    if (!ultravoxCall.joinUrl) {
+      return NextResponse.json(
+        { error: "Ultravox call was created without a joinUrl" },
+        { status: 502 }
+      );
+    }
+
+    const statusCallbackUrl = `${process.env.NEXT_PUBLIC_APP_URL ?? ""}/api/v1/webhooks/twilio`;
+
+    const twilioCall = await placeOutboundCall({
+      to: to_number,
+      from: phoneNumber.number,
+      ultravoxJoinUrl: ultravoxCall.joinUrl,
+      statusCallbackUrl,
+    });
+
+    const { data: call, error: insertError } = await admin
       .from("calls")
       .insert({
         tenant_id,
+        provider_call_id: twilioCall.sid,
         direction: "outbound",
         status: "initiating",
-        caller_number: from_number ?? null,
+        caller_number: phoneNumber.number,
         called_number: to_number,
         started_at: new Date().toISOString(),
+        outbound_purpose: call_type_id,
+        outbound_context: variables,
       })
       .select()
       .single();
@@ -78,21 +179,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // TODO: Integrate with telephony provider (Twilio/Telnyx) to actually initiate the outbound call.
-    // This would involve:
-    // 1. Calling the provider API to place the call
-    // 2. Updating the call record with provider_call_id
-    // 3. Setting up webhooks for call status updates
-    // For now, we just create the record.
-
-    // Log to audit_events
-    await supabase.from("audit_events").insert({
+    await admin.from("audit_events").insert({
       tenant_id,
       actor_id: user.id,
       action: "call.outbound_initiated",
       resource_type: "call",
       resource_id: call.id,
-      metadata: { to_number, from_number, agent_id },
+      metadata: { to_number, call_type_id, provider_call_id: twilioCall.sid },
     });
 
     return NextResponse.json({ data: call }, { status: 201 });

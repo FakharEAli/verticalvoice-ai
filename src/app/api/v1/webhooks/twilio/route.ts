@@ -144,7 +144,8 @@ export async function POST(request: NextRequest) {
 
           case 'failed':
           case 'busy':
-          case 'no-answer': {
+          case 'no-answer':
+          case 'canceled': {
             await fromUntypedTable(supabase, 'calls')
               .update({
                 status: mappedStatus,

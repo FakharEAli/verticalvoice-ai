@@ -2593,4 +2593,169 @@ export const healthcarePack: IndustryPack = {
       "Always end calls professionally: confirm any actions taken, provide a summary of next steps, and ask if there is anything else you can help with. Thank the caller by name and wish them well.",
     maxPromptTokens: 4096,
   },
+
+  // ── Outbound Call Types ─────────────────────────────────────────────────
+
+  outboundCallTypes: [
+    {
+      id: "appointment_reminder",
+      name: "Appointment Reminder",
+      description: "Reminds a patient of an upcoming appointment and offers to reschedule if needed.",
+      category: "reminder",
+      promptTemplate:
+        "You are calling from {{practiceName}} on behalf of {{providerName}}. When the call connects, greet the caller warmly and confirm you're speaking with {{patientName}}. Once confirmed, let them know you're calling with a friendly reminder about their upcoming appointment with {{providerName}} on {{appointmentDate}} at {{appointmentTime}}. Ask if that time still works for them, and if they need to reschedule, let them know someone from the practice will follow up with new times. If the appointment is confirmed, remind them to bring a photo ID and their insurance card and to arrive a few minutes early. Thank them for their time before ending the call.",
+      variables: [
+        {
+          name: "patientName",
+          label: "Patient Name",
+          type: "string",
+          required: true,
+          description: "Full name of the patient being reminded.",
+        },
+        {
+          name: "appointmentDate",
+          label: "Appointment Date",
+          type: "date",
+          required: true,
+          description: "Date of the upcoming appointment.",
+        },
+        {
+          name: "appointmentTime",
+          label: "Appointment Time",
+          type: "time",
+          required: true,
+          description: "Time of the upcoming appointment.",
+        },
+        {
+          name: "providerName",
+          label: "Provider Name",
+          type: "string",
+          required: true,
+          description: "Name of the provider the patient is scheduled to see.",
+        },
+        {
+          name: "practiceName",
+          label: "Practice Name",
+          type: "string",
+          required: true,
+          description: "Name of the healthcare practice placing the call.",
+        },
+      ],
+      requiresConsent: false,
+      maxAttempts: 2,
+    },
+    {
+      id: "prescription_ready",
+      name: "Prescription Ready for Pickup",
+      description: "Notifies a patient that their prescription is ready for pickup at the pharmacy.",
+      category: "alert",
+      promptTemplate:
+        "You are calling from {{practiceName}} to let {{patientName}} know that a prescription is ready for pickup. Confirm you're speaking with {{patientName}} before sharing any details. Let them know that {{medicationName}} is ready and waiting for them at {{pharmacyName}}, and that they can pick it up at their convenience during pharmacy hours. Ask if they have any questions about the pickup process, and if they mention they can't make it in, let them know you'll note that so staff can follow up. Keep the tone friendly and brief, and thank them before ending the call.",
+      variables: [
+        {
+          name: "patientName",
+          label: "Patient Name",
+          type: "string",
+          required: true,
+          description: "Full name of the patient being notified.",
+        },
+        {
+          name: "medicationName",
+          label: "Medication Name",
+          type: "string",
+          required: true,
+          description: "Name of the prescription that is ready for pickup.",
+        },
+        {
+          name: "pharmacyName",
+          label: "Pharmacy Name",
+          type: "string",
+          required: true,
+          description: "Name of the pharmacy where the prescription is waiting.",
+        },
+        {
+          name: "practiceName",
+          label: "Practice Name",
+          type: "string",
+          required: true,
+          description: "Name of the healthcare practice placing the call.",
+        },
+      ],
+      requiresConsent: false,
+      maxAttempts: 2,
+    },
+    {
+      id: "post_visit_follow_up",
+      name: "Post-Visit Follow-Up",
+      description: "A wellness check-in call a few days after a visit or procedure.",
+      category: "outreach",
+      promptTemplate:
+        "You are calling from {{practiceName}} on behalf of {{providerName}} to check in with {{patientName}} after {{visitType}}. Confirm you're speaking with {{patientName}}, then let them know this is a quick wellness check-in following {{visitType}}. Ask how they've been feeling since then and whether they have any questions or concerns about their recovery or care instructions. If they mention new or worsening symptoms, let them know someone from the practice will follow up, and do not offer any clinical advice yourself. Thank them for their time, and let them know {{practiceName}} is here if they need anything.",
+      variables: [
+        {
+          name: "patientName",
+          label: "Patient Name",
+          type: "string",
+          required: true,
+          description: "Full name of the patient being called.",
+        },
+        {
+          name: "visitType",
+          label: "Visit Type",
+          type: "string",
+          required: true,
+          description: "Description of the visit or procedure being followed up on, e.g. \"your recent visit\".",
+        },
+        {
+          name: "providerName",
+          label: "Provider Name",
+          type: "string",
+          required: true,
+          description: "Name of the provider the patient saw.",
+        },
+        {
+          name: "practiceName",
+          label: "Practice Name",
+          type: "string",
+          required: true,
+          description: "Name of the healthcare practice placing the call.",
+        },
+      ],
+      requiresConsent: false,
+      maxAttempts: 1,
+    },
+    {
+      id: "practice_alert",
+      name: "Practice-Wide Alert",
+      description: "General practice-wide notice, such as an office closure, schedule change, or weather closure.",
+      category: "alert",
+      promptTemplate:
+        "You are calling from {{practiceName}} with an important notice for {{patientName}}. Confirm you're speaking with {{patientName}}, then clearly share the following message: {{alertMessage}}. Speak slowly and clearly, and offer to repeat the message if needed. Ask if they have any immediate questions about how this affects them, and let them know they can call the practice directly for more details. Thank them and end the call politely.",
+      variables: [
+        {
+          name: "patientName",
+          label: "Patient Name",
+          type: "string",
+          required: true,
+          description: "Full name of the patient being notified.",
+        },
+        {
+          name: "alertMessage",
+          label: "Alert Message",
+          type: "string",
+          required: true,
+          description: "The specific notice content to relay to the patient, e.g. an office closure or schedule change.",
+        },
+        {
+          name: "practiceName",
+          label: "Practice Name",
+          type: "string",
+          required: true,
+          description: "Name of the healthcare practice placing the call.",
+        },
+      ],
+      requiresConsent: false,
+      maxAttempts: 2,
+    },
+  ],
 };

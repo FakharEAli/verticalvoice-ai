@@ -288,6 +288,8 @@ export interface Database {
           started_at: string;
           ended_at: string | null;
           recording_url: string | null;
+          outbound_purpose: string | null;
+          outbound_context: Json | null;
           created_at: string;
           updated_at: string;
         };
@@ -303,6 +305,8 @@ export interface Database {
           started_at?: string;
           ended_at?: string | null;
           recording_url?: string | null;
+          outbound_purpose?: string | null;
+          outbound_context?: Json | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -318,6 +322,8 @@ export interface Database {
           started_at?: string;
           ended_at?: string | null;
           recording_url?: string | null;
+          outbound_purpose?: string | null;
+          outbound_context?: Json | null;
           created_at?: string;
           updated_at?: string;
         };

@@ -394,6 +394,36 @@ export interface PromptFragmentSet {
   maxPromptTokens: number;
 }
 
+// ─── Outbound Call Types ────────────────────────────────────────────────────
+// The inbound intent catalog above describes what the agent handles when a
+// caller reaches out. Outbound call types describe the reverse: calls the
+// business's agent places on its own initiative — reminders, confirmations,
+// alerts, and outreach — each with its own scripted purpose and required
+// context rather than open-ended intent handling.
+
+export type OutboundCallCategory = "reminder" | "confirmation" | "alert" | "outreach" | "campaign";
+
+export interface OutboundCallVariable {
+  name: string;
+  label: string;
+  type: "string" | "number" | "date" | "time" | "phone" | "currency";
+  required: boolean;
+  description: string;
+}
+
+export interface OutboundCallTypeDefinition {
+  id: string;
+  name: string;
+  description: string;
+  category: OutboundCallCategory;
+  /** System-prompt template with {{variableName}} placeholders, filled from `variables` at call time. */
+  promptTemplate: string;
+  variables: OutboundCallVariable[];
+  /** Marketing/promotional calls typically require prior opt-in; reminders/confirmations about an existing transaction don't. */
+  requiresConsent: boolean;
+  maxAttempts?: number;
+}
+
 // ─── The IndustryPack Interface ─────────────────────────────────────────────
 
 export interface IndustryPack {
@@ -414,4 +444,5 @@ export interface IndustryPack {
   evaluationSuite: EvaluationScenario[];
   demoFixtures: DemoFixtureSet;
   promptFragments: PromptFragmentSet;
+  outboundCallTypes: OutboundCallTypeDefinition[];
 }

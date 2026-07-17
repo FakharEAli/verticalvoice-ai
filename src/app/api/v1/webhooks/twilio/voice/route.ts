@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/database/supabase-admin';
 import { validateTwilioSignature } from '@/lib/webhooks/signature';
+import { createUltravoxCall } from '@/lib/telephony/ultravox';
 import { logger } from '@/lib/observability/logger';
 
 function twiml(xmlBody: string, status = 200) {
@@ -12,38 +13,6 @@ function twiml(xmlBody: string, status = 200) {
 
 function sayAndHangup(message: string) {
   return twiml(`<Response><Say>${message}</Say><Hangup/></Response>`);
-}
-
-interface UltravoxCallResponse {
-  callId: string;
-  joinUrl: string | null;
-}
-
-async function createUltravoxCall(systemPrompt: string, voiceId: string | null): Promise<UltravoxCallResponse> {
-  const apiKey = process.env.ULTRAVOX_API_KEY;
-  const baseUrl = process.env.ULTRAVOX_BASE_URL ?? 'https://api.ultravox.ai/api';
-  if (!apiKey) throw new Error('ULTRAVOX_API_KEY is not configured');
-
-  const res = await fetch(`${baseUrl}/calls`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-API-Key': apiKey,
-    },
-    body: JSON.stringify({
-      systemPrompt,
-      ...(voiceId ? { voice: voiceId } : {}),
-      medium: { twilio: {} },
-      recordingEnabled: true,
-    }),
-  });
-
-  if (!res.ok) {
-    const text = await res.text().catch(() => '');
-    throw new Error(`Ultravox call creation failed: ${res.status} ${text}`);
-  }
-
-  return (await res.json()) as UltravoxCallResponse;
 }
 
 export async function POST(request: NextRequest) {

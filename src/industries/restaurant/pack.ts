@@ -2563,4 +2563,186 @@ export const restaurantPack: IndustryPack = {
     locale: "en-US",
     currency: "USD",
   },
+
+  // ─── Outbound Call Types ─────────────────────────────────────────────────
+  outboundCallTypes: [
+    {
+      id: "reservation_reminder",
+      name: "Reservation Reminder",
+      description:
+        "Reminds a guest of an upcoming reservation and confirms the party size and time still work.",
+      category: "reminder",
+      promptTemplate:
+        "You are calling on behalf of {{restaurantName}} to remind {{guestName}} about an upcoming reservation. First confirm you're speaking with {{guestName}}. Then let them know you're calling to confirm their reservation for {{partySize}} on {{reservationDate}} at {{reservationTime}}. Ask if the party size or time needs to change. If the restaurant only holds tables for a short window after the reservation time, mention that briefly so they know to call ahead if they're running late. Thank them and let them know you look forward to seeing them.",
+      variables: [
+        {
+          name: "guestName",
+          label: "Guest Name",
+          type: "string",
+          required: true,
+          description: "Name of the guest holding the reservation.",
+        },
+        {
+          name: "reservationDate",
+          label: "Reservation Date",
+          type: "date",
+          required: true,
+          description: "Date of the upcoming reservation.",
+        },
+        {
+          name: "reservationTime",
+          label: "Reservation Time",
+          type: "time",
+          required: true,
+          description: "Time of the upcoming reservation.",
+        },
+        {
+          name: "partySize",
+          label: "Party Size",
+          type: "number",
+          required: true,
+          description: "Number of guests in the reserved party.",
+        },
+        {
+          name: "restaurantName",
+          label: "Restaurant Name",
+          type: "string",
+          required: true,
+          description: "Name of the restaurant placing the call.",
+        },
+      ],
+      requiresConsent: false,
+      maxAttempts: 2,
+    },
+    {
+      id: "order_confirmation",
+      name: "Order Confirmation",
+      description:
+        "Confirms a takeout or delivery order and communicates the ready or delivery time.",
+      category: "confirmation",
+      promptTemplate:
+        "You are calling on behalf of {{restaurantName}} to confirm an order for {{guestName}}. Confirm you're speaking with {{guestName}}, then read back the order: {{orderSummary}}. Let them know this is a {{orderType}} order and it will be ready by {{readyOrDeliveryTime}}. Ask if anything about the order needs to change and confirm the {{orderType}} details are still correct. Thank them for their order.",
+      variables: [
+        {
+          name: "guestName",
+          label: "Guest Name",
+          type: "string",
+          required: true,
+          description: "Name on the order.",
+        },
+        {
+          name: "orderSummary",
+          label: "Order Summary",
+          type: "string",
+          required: true,
+          description: "Brief description of the items that were ordered.",
+        },
+        {
+          name: "readyOrDeliveryTime",
+          label: "Ready or Delivery Time",
+          type: "time",
+          required: true,
+          description: "The time the order will be ready for pickup or arrive for delivery.",
+        },
+        {
+          name: "orderType",
+          label: "Order Type",
+          type: "string",
+          required: true,
+          description: "Whether the order is 'pickup' or 'delivery'.",
+        },
+        {
+          name: "restaurantName",
+          label: "Restaurant Name",
+          type: "string",
+          required: true,
+          description: "Name of the restaurant placing the call.",
+        },
+      ],
+      requiresConsent: false,
+      maxAttempts: 2,
+    },
+    {
+      id: "catering_follow_up",
+      name: "Catering Follow-Up",
+      description:
+        "Follows up on a catering or large-event inquiry that hasn't been finalized yet.",
+      category: "outreach",
+      promptTemplate:
+        "You are calling on behalf of {{restaurantName}} to follow up with {{contactName}} about a catering or large-event inquiry that hasn't been finalized. Mention that you're following up on their interest in an event for {{guestCount}} guests around {{eventDate}}. Ask if they'd like help finalizing the menu, headcount, or timing, and offer to connect them with the events team if they have questions. Keep the tone warm and helpful, not pushy, and thank them for considering {{restaurantName}}.",
+      variables: [
+        {
+          name: "contactName",
+          label: "Contact Name",
+          type: "string",
+          required: true,
+          description: "Name of the person who made the catering inquiry.",
+        },
+        {
+          name: "eventDate",
+          label: "Event Date",
+          type: "date",
+          required: true,
+          description: "Requested or estimated date of the catered event.",
+        },
+        {
+          name: "guestCount",
+          label: "Guest Count",
+          type: "number",
+          required: true,
+          description: "Estimated number of guests for the event.",
+        },
+        {
+          name: "restaurantName",
+          label: "Restaurant Name",
+          type: "string",
+          required: true,
+          description: "Name of the restaurant placing the call.",
+        },
+      ],
+      requiresConsent: false,
+      maxAttempts: 2,
+    },
+    {
+      id: "promotional_campaign",
+      name: "Promotional Campaign",
+      description:
+        "Announces a promotion, new menu item, or special event to a guest who has opted in to marketing outreach.",
+      category: "campaign",
+      promptTemplate:
+        "You are calling on behalf of {{restaurantName}} with a quick promotional update for {{guestName}}, who has opted in to hear about offers. Share the following: {{promotionDetails}}. If there's an expiration date, let them know it's valid until {{expirationDate}}. Keep the call brief and upbeat, and let them know they can ask to stop receiving these calls at any time.",
+      variables: [
+        {
+          name: "guestName",
+          label: "Guest Name",
+          type: "string",
+          required: true,
+          description: "Name of the guest being contacted.",
+        },
+        {
+          name: "promotionDetails",
+          label: "Promotion Details",
+          type: "string",
+          required: true,
+          description: "The offer, new menu item, or special event being announced.",
+        },
+        {
+          name: "restaurantName",
+          label: "Restaurant Name",
+          type: "string",
+          required: true,
+          description: "Name of the restaurant placing the call.",
+        },
+        {
+          name: "expirationDate",
+          label: "Expiration Date",
+          type: "date",
+          required: false,
+          description: "Optional date the promotion expires.",
+        },
+      ],
+      requiresConsent: true,
+      maxAttempts: 1,
+    },
+  ],
 };

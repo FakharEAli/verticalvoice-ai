@@ -4,6 +4,7 @@ import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutDashboard,
   Phone,
+  PhoneOutgoing,
   History,
   Bot,
   Brain,
@@ -58,6 +59,11 @@ const mainNavItems = [
     title: "Call History",
     url: "/dashboard/calls?tab=history",
     icon: History,
+  },
+  {
+    title: "Outbound Calls",
+    url: "/dashboard/outbound",
+    icon: PhoneOutgoing,
   },
   {
     title: "Agent",
