@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { toast } from "sonner";
 import {
   Phone,
   Play,
@@ -9,6 +10,7 @@ import {
   Minus,
   Send,
   FlaskConical,
+  Loader2,
 } from "lucide-react";
 import {
   Card,
@@ -22,6 +24,15 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
+
+interface AnalyzeResult {
+  matched: boolean;
+  intentName: string;
+  intentCategory: string | null;
+  confidence: number;
+  suggestedResponse: string;
+  note?: string;
+}
 
 // --- Mock data ---
 
@@ -140,6 +151,37 @@ const resultLabel: Record<Scenario["result"], string> = {
 
 export default function TestCenterPage() {
   const [callerInput, setCallerInput] = useState("");
+  const [analyzing, setAnalyzing] = useState(false);
+  const [result, setResult] = useState<AnalyzeResult | null>(null);
+
+  async function handleAnalyze() {
+    const text = callerInput.trim();
+    if (!text) {
+      toast.error("Enter a caller statement to analyze.");
+      return;
+    }
+
+    setAnalyzing(true);
+    try {
+      const res = await fetch("/api/v1/test-center/analyze", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text }),
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        toast.error(data.error ?? "Failed to analyze statement.");
+        return;
+      }
+
+      setResult(data as AnalyzeResult);
+    } catch {
+      toast.error("Failed to analyze statement. Please try again.");
+    } finally {
+      setAnalyzing(false);
+    }
+  }
 
   return (
     <div className="space-y-8">
@@ -165,36 +207,67 @@ export default function TestCenterPage() {
                 placeholder="Type a caller statement..."
                 value={callerInput}
                 onChange={(e) => setCallerInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !analyzing) {
+                    handleAnalyze();
+                  }
+                }}
               />
-              <Button className="gap-2 shrink-0">
-                <Send className="size-4" />
+              <Button
+                className="gap-2 shrink-0"
+                onClick={handleAnalyze}
+                disabled={analyzing || callerInput.trim().length === 0}
+              >
+                {analyzing ? (
+                  <Loader2 className="size-4 animate-spin" />
+                ) : (
+                  <Send className="size-4" />
+                )}
                 Analyze
               </Button>
             </div>
 
             <Separator />
 
-            {/* Sample result */}
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium">Detected Intent</span>
-                <Badge>Appointment Booking</Badge>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium">Confidence</span>
-                <span className="text-sm font-semibold text-green-600">
-                  94%
-                </span>
-              </div>
-              <div className="space-y-1.5">
-                <span className="text-sm font-medium">Suggested Response</span>
-                <div className="rounded-md border p-3 text-sm text-muted-foreground bg-muted/50">
-                  &quot;I&apos;d be happy to help you schedule an appointment.
-                  Could you let me know your preferred date and time? I&apos;ll
-                  also need to verify your insurance information.&quot;
+            {/* Analysis result */}
+            {result ? (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium">Detected Intent</span>
+                  <Badge variant={result.matched ? "default" : "outline"}>
+                    {result.intentName}
+                  </Badge>
                 </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium">Confidence</span>
+                  <span
+                    className={`text-sm font-semibold ${
+                      result.confidence >= 60
+                        ? "text-green-600"
+                        : result.confidence >= 30
+                          ? "text-amber-600"
+                          : "text-red-600"
+                    }`}
+                  >
+                    {result.confidence}%
+                  </span>
+                </div>
+                <div className="space-y-1.5">
+                  <span className="text-sm font-medium">Suggested Response</span>
+                  <div className="rounded-md border p-3 text-sm text-muted-foreground bg-muted/50">
+                    &quot;{result.suggestedResponse}&quot;
+                  </div>
+                </div>
+                {result.note && (
+                  <p className="text-xs text-muted-foreground">{result.note}</p>
+                )}
               </div>
-            </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                Enter a caller statement above and click Analyze to see how
+                your agent&apos;s active configuration would interpret it.
+              </p>
+            )}
           </CardContent>
         </Card>
 

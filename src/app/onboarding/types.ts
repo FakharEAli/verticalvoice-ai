@@ -19,6 +19,7 @@ export interface OnboardingData {
   businessSize: string;
 
   // Step 3 - Smart import
+  smartImportUrl: string;
   importedData: Record<
     string,
     {
@@ -88,6 +89,7 @@ export const initialOnboardingData: OnboardingData = {
   secondaryLanguage: '',
   numberOfLocations: 1,
   businessSize: '',
+  smartImportUrl: '',
   importedData: {},
   industryConfig: {},
   voiceId: '',

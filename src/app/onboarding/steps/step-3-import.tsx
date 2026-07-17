@@ -14,46 +14,29 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import { Globe, Upload, FileText, Loader2 } from 'lucide-react';
+import { Globe, Upload, FileText, Loader2, Info } from 'lucide-react';
 import type { StepProps } from '../types';
 
 export function Step3Import({ data, updateData }: StepProps) {
-  const [url, setUrl] = useState('');
   const [importing, setImporting] = useState(false);
   const [pastedText, setPastedText] = useState('');
+  const [importMessage, setImportMessage] = useState<string | null>(null);
+
+  const url = data.smartImportUrl;
+  const setUrl = (value: string) => updateData({ smartImportUrl: value });
 
   const handleImport = () => {
+    setImportMessage(null);
     setImporting(true);
+    // There is no website-scraping backend wired up yet. Rather than
+    // fabricating plausible-looking business data with fake confidence
+    // scores, fail honestly and let the user fill fields in manually.
     setTimeout(() => {
-      const mockImported: typeof data.importedData = {
-        businessName: {
-          value: 'Extracted Business Name',
-          source: 'website',
-          confidence: 0.95,
-          needsReview: false,
-        },
-        phone: {
-          value: '+1 (555) 123-4567',
-          source: 'website',
-          confidence: 0.9,
-          needsReview: false,
-        },
-        address: {
-          value: '456 Oak Ave, Suite 200',
-          source: 'website',
-          confidence: 0.85,
-          needsReview: true,
-        },
-        hours: {
-          value: 'Mon-Fri 9am-5pm',
-          source: 'website',
-          confidence: 0.7,
-          needsReview: true,
-        },
-      };
-      updateData({ importedData: mockImported });
       setImporting(false);
-    }, 2000);
+      setImportMessage(
+        "We couldn't find enough information at this URL. Smart import isn't able to extract data automatically yet — you can fill these fields in manually in the next steps."
+      );
+    }, 1200);
   };
 
   const toggleReview = (key: string) => {
@@ -104,6 +87,12 @@ export function Step3Import({ data, updateData }: StepProps) {
               )}
             </Button>
           </div>
+          {importMessage && (
+            <div className="mt-4 flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-200">
+              <Info className="mt-0.5 size-4 shrink-0" />
+              <p>{importMessage}</p>
+            </div>
+          )}
         </CardContent>
       </Card>
 

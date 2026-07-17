@@ -195,7 +195,7 @@ export default function PricingPage() {
               key={tier.name}
               className={`relative flex flex-col ${
                 tier.highlighted
-                  ? 'border-primary shadow-lg ring-1 ring-primary'
+                  ? 'overflow-visible border-primary shadow-lg ring-1 ring-primary'
                   : ''
               }`}
             >

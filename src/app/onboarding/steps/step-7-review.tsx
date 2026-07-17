@@ -12,6 +12,103 @@ import { Separator } from '@/components/ui/separator';
 import { AlertTriangle, Pencil } from 'lucide-react';
 import type { StepProps } from '../types';
 
+const businessSizeLabels: Record<string, string> = {
+  solo: 'Solo (1 person)',
+  small: 'Small (2-10)',
+  medium: 'Medium (11-50)',
+  large: 'Large (51-200)',
+  enterprise: 'Enterprise (200+)',
+};
+
+const voiceLabels: Record<string, string> = {
+  sophia: 'Sophia',
+  james: 'James',
+  luna: 'Luna',
+  marcus: 'Marcus',
+  aria: 'Aria',
+  noah: 'Noah',
+};
+
+const afterHoursLabels: Record<string, string> = {
+  voicemail: 'Take a voicemail',
+  transfer: 'Transfer to on-call',
+  schedule: 'Offer to schedule callback',
+  info_only: 'Provide info only',
+};
+
+const integrationLabels: Record<string, string> = {
+  google_calendar: 'Google Calendar',
+  twilio: 'Twilio',
+  salesforce: 'Salesforce CRM',
+  hubspot: 'HubSpot',
+  slack: 'Slack',
+  stripe: 'Stripe',
+  ehr: 'EHR / Practice Management',
+  opentable: 'OpenTable',
+  mls: 'MLS Integration',
+};
+
+// A handful of Step 4 (industry config) fields store a short coded value
+// (e.g. "30", "24h", "15min") whose human label lives only in that step's
+// Select options. Map the known ones here so the review step doesn't show
+// raw codes for these specific keys.
+const configValueLabels: Record<string, Record<string, string>> = {
+  appointmentDuration: {
+    '15': '15 minutes',
+    '20': '20 minutes',
+    '30': '30 minutes',
+    '45': '45 minutes',
+    '60': '60 minutes',
+    '90': '90 minutes',
+  },
+  bookingLeadTime: {
+    '1h': '1 hour',
+    '4h': '4 hours',
+    '24h': '24 hours',
+    '48h': '48 hours',
+    '72h': '72 hours',
+  },
+  leadResponseTime: {
+    '5min': '5 minutes',
+    '15min': '15 minutes',
+    '30min': '30 minutes',
+    '1h': '1 hour',
+    '4h': '4 hours',
+  },
+};
+
+function formatBusinessSize(size: string): string {
+  if (!size) return size;
+  return businessSizeLabels[size] ?? size;
+}
+
+function formatTimezone(tz: string): string {
+  if (!tz) return tz;
+  return tz.replace(/_/g, ' ');
+}
+
+function formatVoice(voiceId: string): string {
+  if (!voiceId) return 'Not selected';
+  return voiceLabels[voiceId] ?? voiceId;
+}
+
+function formatAfterHours(value: string): string {
+  if (!value) return value;
+  return afterHoursLabels[value] ?? value;
+}
+
+function formatIntegration(id: string | null): string {
+  if (!id) return 'None (demo mode)';
+  return integrationLabels[id] ?? id;
+}
+
+function formatConfigValue(key: string, val: unknown): string {
+  if (typeof val === 'boolean') return val ? 'Yes' : 'No';
+  if (Array.isArray(val)) return (val as string[]).join(', ');
+  const str = String(val ?? '');
+  return configValueLabels[key]?.[str] ?? str;
+}
+
 interface ReviewSectionProps {
   title: string;
   step: number;
@@ -92,10 +189,10 @@ export function Step7Review({
           { label: 'Phone', value: data.mainPhone },
           { label: 'Address', value: data.businessAddress },
           { label: 'Country', value: data.country },
-          { label: 'Timezone', value: data.timezone },
+          { label: 'Timezone', value: formatTimezone(data.timezone) },
           { label: 'Contact', value: data.contactName },
           { label: 'Email', value: data.contactEmail },
-          { label: 'Business Size', value: data.businessSize },
+          { label: 'Business Size', value: formatBusinessSize(data.businessSize) },
           {
             label: 'Locations',
             value: String(data.numberOfLocations),
@@ -111,9 +208,7 @@ export function Step7Review({
           label: key
             .replace(/([A-Z])/g, ' $1')
             .replace(/^./, (s) => s.toUpperCase()),
-          value: Array.isArray(val)
-            ? (val as string[]).join(', ')
-            : String(val ?? ''),
+          value: formatConfigValue(key, val),
         }))}
       />
 
@@ -122,7 +217,7 @@ export function Step7Review({
         step={4}
         onEdit={jumpTo}
         items={[
-          { label: 'Voice', value: data.voiceId || 'Not selected' },
+          { label: 'Voice', value: formatVoice(data.voiceId) },
           { label: 'Tone', value: toneLabel },
           { label: 'Speaking Pace', value: paceLabel },
           { label: 'Greeting Style', value: greetLabel },
@@ -131,7 +226,7 @@ export function Step7Review({
             value: data.aiDisclosure ? 'Enabled' : 'Disabled',
           },
           { label: 'Transfer Number', value: data.transferNumber },
-          { label: 'After Hours', value: data.afterHoursBehavior },
+          { label: 'After Hours', value: formatAfterHours(data.afterHoursBehavior) },
         ]}
       />
 
@@ -142,7 +237,7 @@ export function Step7Review({
         items={[
           {
             label: 'Connected Integration',
-            value: data.integration ?? 'None (demo mode)',
+            value: formatIntegration(data.integration),
           },
         ]}
       />

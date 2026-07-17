@@ -224,7 +224,7 @@ export function AppSidebar({ user }: AppSidebarProps) {
                 render={
                   <SidebarMenuButton
                     size="lg"
-                    className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+                    className="data-popup-open:bg-sidebar-accent data-popup-open:text-sidebar-accent-foreground"
                   />
                 }
               >
@@ -248,6 +248,17 @@ export function AppSidebar({ user }: AppSidebarProps) {
                 side="top"
                 align="end"
                 sideOffset={4}
+                style={
+                  {
+                    // Neutralize the enter/exit scale (zoom-in/zoom-out) transform so the
+                    // popup's hit-box matches its final visual size from the first frame.
+                    // Without this, clicking "Sign out" during the ~100ms open animation
+                    // can miss the still-scaling element (click appears to require a
+                    // second attempt once the animation settles).
+                    "--tw-enter-scale": 1,
+                    "--tw-exit-scale": 1,
+                  } as React.CSSProperties
+                }
               >
                 <div className="flex items-center gap-2 px-2 py-1.5 text-left text-sm">
                   <Avatar className="size-8 rounded-lg">

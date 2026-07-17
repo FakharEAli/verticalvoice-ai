@@ -81,19 +81,22 @@ export function Step5Personality({ data, updateData }: StepProps) {
                 onClick={() => updateData({ voiceId: voice.id })}
               >
                 <CardHeader>
-                  <div className="flex items-center gap-3">
-                    <div
-                      className={`flex size-10 items-center justify-center rounded-full ${
-                        selected
-                          ? 'bg-primary text-primary-foreground'
-                          : 'bg-muted text-muted-foreground'
-                      }`}
-                    >
-                      <Mic className="size-5" />
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div
+                        className={`flex size-10 items-center justify-center rounded-full ${
+                          selected
+                            ? 'bg-primary text-primary-foreground'
+                            : 'bg-muted text-muted-foreground'
+                        }`}
+                      >
+                        <Mic className="size-5" />
+                      </div>
+                      <div>
+                        <CardTitle className="text-base">{voice.name}</CardTitle>
+                      </div>
                     </div>
-                    <div>
-                      <CardTitle className="text-base">{voice.name}</CardTitle>
-                    </div>
+                    {selected && <Badge>Selected</Badge>}
                   </div>
                 </CardHeader>
                 <CardContent>

@@ -45,11 +45,18 @@ export default async function CallsPage({
   const direction: DirectionFilter =
     params.direction === "inbound" || params.direction === "outbound" ? params.direction : "all";
 
-  const { calls, total } = await listCalls(tenantId, {
-    page,
-    pageSize: PAGE_SIZE,
-    direction: direction === "all" ? undefined : direction,
-  });
+  const [{ calls, total }, { data: businessProfile }] = await Promise.all([
+    listCalls(tenantId, {
+      page,
+      pageSize: PAGE_SIZE,
+      direction: direction === "all" ? undefined : direction,
+    }),
+    supabase.from("business_profiles").select("timezone").eq("tenant_id", tenantId).maybeSingle(),
+  ]);
+
+  // Same tenant-configured business timezone used on the Overview page, so
+  // both pages agree on the wall-clock time shown for the same `started_at`.
+  const tenantTimezone = businessProfile?.timezone || "UTC";
 
   const rows: CallRow[] = calls.map((call) => ({
     id: call.id,
@@ -77,6 +84,7 @@ export default async function CallsPage({
         page={Math.min(page, totalPages)}
         totalPages={totalPages}
         direction={direction}
+        timezone={tenantTimezone}
       />
     </div>
   );

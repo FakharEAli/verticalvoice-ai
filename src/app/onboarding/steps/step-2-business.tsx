@@ -10,7 +10,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
-import type { StepProps } from '../types';
+import type { Industry, StepProps } from '../types';
 
 const countries = [
   'United States',
@@ -50,6 +50,18 @@ const languages = [
   { value: 'ar', label: 'Arabic' },
 ];
 
+const businessNamePlaceholders: Record<Industry, string> = {
+  healthcare: 'Acme Health Clinic',
+  restaurant: "Bella's Italian Kitchen",
+  real_estate: 'Metro Realty Group',
+};
+
+function getBusinessNamePlaceholder(industry: Industry | null): string {
+  return industry
+    ? businessNamePlaceholders[industry]
+    : businessNamePlaceholders.healthcare;
+}
+
 const businessSizes = [
   { value: 'solo', label: 'Solo (1 person)' },
   { value: 'small', label: 'Small (2-10)' },
@@ -70,7 +82,7 @@ export function Step2Business({ data, updateData }: StepProps) {
             </Label>
             <Input
               id="businessName"
-              placeholder="Acme Health Clinic"
+              placeholder={getBusinessNamePlaceholder(data.industry)}
               value={data.businessName}
               onChange={(e) =>
                 updateData({ businessName: e.target.value })

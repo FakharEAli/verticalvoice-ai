@@ -47,8 +47,9 @@ function formatDuration(totalSeconds: number): string {
   return `${minutes}m ${seconds.toString().padStart(2, "0")}s`;
 }
 
-function formatCallTime(iso: string): string {
+function formatCallTime(iso: string, timeZone: string): string {
   return new Date(iso).toLocaleString(undefined, {
+    timeZone,
     hour: "numeric",
     minute: "2-digit",
     month: "short",
@@ -148,6 +149,7 @@ export default async function OverviewPage() {
     { data: allCalls },
     { data: recentCallsRaw },
     { data: integrations },
+    { data: businessProfile },
   ] = await Promise.all([
     supabase.from("tenants").select("name, industry").eq("id", tenantId).maybeSingle(),
     getAgentConfig(tenantId),
@@ -164,7 +166,13 @@ export default async function OverviewPage() {
       .order("started_at", { ascending: false })
       .limit(8),
     supabase.from("integration_connections").select("provider, status").eq("tenant_id", tenantId),
+    supabase.from("business_profiles").select("timezone").eq("tenant_id", tenantId).maybeSingle(),
   ]);
+
+  // Format call timestamps in the tenant's configured business timezone (not
+  // the ambient server/browser timezone) so this page and Call History always
+  // agree on the same wall-clock time for the same `started_at` value.
+  const tenantTimezone = businessProfile?.timezone || "UTC";
 
   let snapshot: AgentSnapshot | null = null;
   if (activeConfig) {
@@ -314,7 +322,7 @@ export default async function OverviewPage() {
                     <div className="flex items-center justify-between py-1">
                       <div className="flex items-center gap-4">
                         <span className="w-32 text-sm text-muted-foreground">
-                          {formatCallTime(call.started_at)}
+                          {formatCallTime(call.started_at, tenantTimezone)}
                         </span>
                         <div>
                           <p className="text-sm font-medium">

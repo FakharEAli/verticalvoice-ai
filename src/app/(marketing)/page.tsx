@@ -456,7 +456,7 @@ export default function HomePage() {
             <Card
               key={tier.name}
               className={`relative flex flex-col ${
-                tier.popular ? 'ring-2 ring-primary shadow-lg' : ''
+                tier.popular ? 'overflow-visible ring-2 ring-primary shadow-lg' : ''
               }`}
             >
               {tier.popular && (
@@ -547,7 +547,7 @@ export default function HomePage() {
                 <Button
                   size="lg"
                   variant="outline"
-                  className="h-12 border-primary-foreground/20 px-8 text-base text-primary-foreground hover:bg-primary-foreground/10"
+                  className="h-12 border-primary-foreground/20 bg-transparent px-8 text-base text-primary-foreground hover:bg-primary-foreground/10 hover:text-primary-foreground"
                 >
                   Contact sales
                 </Button>

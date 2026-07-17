@@ -326,14 +326,26 @@ export default async function AgentPage() {
         </CardHeader>
         <CardContent>
           {snapshot.system_prompt ? (
-            <details>
-              <summary className="cursor-pointer text-sm font-medium text-primary">
+            <div>
+              {/*
+                Plain checkbox + label toggle instead of native <details>/<summary>.
+                This needs no client-side JS (the page stays a Server Component),
+                and a <label htmlFor> click reliably toggles its checkbox in every
+                browser and automated click tool — unlike native <details>, whose
+                "activation behavior" toggle has been unreliable here under
+                coordinate-based clicks even though element.click() worked.
+              */}
+              <input type="checkbox" id="system-prompt-toggle" className="peer sr-only" />
+              <label
+                htmlFor="system-prompt-toggle"
+                className="inline-flex cursor-pointer select-none items-center gap-1 text-sm font-medium text-primary hover:underline"
+              >
                 View full system prompt ({snapshot.system_prompt.length.toLocaleString()} characters)
-              </summary>
-              <pre className="mt-3 max-h-[32rem] overflow-auto whitespace-pre-wrap rounded-lg bg-muted p-4 text-xs leading-relaxed">
+              </label>
+              <pre className="mt-3 hidden max-h-[32rem] overflow-auto whitespace-pre-wrap rounded-lg bg-muted p-4 text-xs leading-relaxed peer-checked:block">
                 {snapshot.system_prompt}
               </pre>
-            </details>
+            </div>
           ) : (
             <p className="text-sm text-muted-foreground">
               No system prompt was captured in this config.

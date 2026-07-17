@@ -33,11 +33,11 @@ function formatDuration(seconds: number | null): string {
   return `${minutes}:${secs.toString().padStart(2, "0")}`;
 }
 
-function formatDateTime(iso: string): { time: string; date: string } {
+function formatDateTime(iso: string, timeZone: string): { time: string; date: string } {
   const d = new Date(iso);
   return {
-    time: d.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" }),
-    date: d.toLocaleDateString(undefined, { month: "short", day: "numeric" }),
+    time: d.toLocaleTimeString(undefined, { timeZone, hour: "numeric", minute: "2-digit" }),
+    date: d.toLocaleDateString(undefined, { timeZone, month: "short", day: "numeric" }),
   };
 }
 
@@ -109,9 +109,11 @@ interface CallsTableProps {
   page: number;
   totalPages: number;
   direction: DirectionFilter;
+  /** IANA timezone (e.g. "America/New_York") the tenant's timestamps should render in. */
+  timezone: string;
 }
 
-export function CallsTable({ calls, total, page, totalPages, direction }: CallsTableProps) {
+export function CallsTable({ calls, total, page, totalPages, direction, timezone }: CallsTableProps) {
   const [search, setSearch] = useState("");
 
   const filtered = useMemo(() => {
@@ -164,7 +166,7 @@ export function CallsTable({ calls, total, page, totalPages, direction }: CallsT
       <Card>
         <CardContent className="p-0">
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="w-full min-w-[720px] text-sm">
               <thead>
                 <tr className="border-b text-left">
                   <th className="px-4 py-3 font-medium text-muted-foreground">Started</th>
@@ -184,18 +186,18 @@ export function CallsTable({ calls, total, page, totalPages, direction }: CallsT
                   </tr>
                 ) : (
                   filtered.map((call) => {
-                    const { time, date } = formatDateTime(call.startedAt);
+                    const { time, date } = formatDateTime(call.startedAt, timezone);
                     return (
                       <tr key={call.id} className="border-b last:border-0 hover:bg-muted/50">
                         <td className="px-4 py-3 whitespace-nowrap">
                           <p className="font-medium">{time}</p>
                           <p className="text-xs text-muted-foreground">{date}</p>
                         </td>
-                        <td className="px-4 py-3 font-medium">{call.callerNumber ?? "Unknown"}</td>
-                        <td className="px-4 py-3 text-muted-foreground">
+                        <td className="px-4 py-3 font-medium whitespace-nowrap">{call.callerNumber ?? "Unknown"}</td>
+                        <td className="px-4 py-3 whitespace-nowrap text-muted-foreground">
                           {formatDuration(call.durationSeconds)}
                         </td>
-                        <td className="px-4 py-3">
+                        <td className="px-4 py-3 whitespace-nowrap">
                           <div className="flex items-center gap-2">
                             {call.direction === "inbound" ? (
                               <PhoneIncoming className="size-3.5 text-muted-foreground" />
@@ -205,8 +207,8 @@ export function CallsTable({ calls, total, page, totalPages, direction }: CallsT
                             <span className="capitalize">{call.direction}</span>
                           </div>
                         </td>
-                        <td className="px-4 py-3">{statusBadge(call.status)}</td>
-                        <td className="px-4 py-3">
+                        <td className="px-4 py-3 whitespace-nowrap">{statusBadge(call.status)}</td>
+                        <td className="px-4 py-3 whitespace-nowrap">
                           <Button
                             variant="ghost"
                             size="sm"

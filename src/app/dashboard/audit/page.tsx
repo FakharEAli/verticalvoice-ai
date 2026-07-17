@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Card,
   CardContent,
@@ -11,185 +11,160 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import {
-  LogIn,
-  Settings,
-  Power,
-  Phone,
-  UserPlus,
-  FileText,
+  Activity,
+  Bot,
+  Building2,
   ChevronDown,
   ChevronRight,
+  Phone,
+  Wrench,
+  type LucideIcon,
 } from "lucide-react";
 
-type EventType =
-  | "Login"
-  | "Config"
-  | "Activation"
-  | "Call"
-  | "Team"
-  | "Knowledge";
-
 interface AuditEvent {
-  id: number;
-  type: EventType;
-  timestamp: string;
-  actor: string;
-  actorEmail: string;
+  id: string;
   action: string;
-  target: string;
+  resourceType: string;
+  resourceId: string | null;
+  metadata: unknown;
+  createdAt: string;
+  actorId: string | null;
+  actorEmail: string | null;
+  actorName: string | null;
 }
 
-const eventIcons: Record<EventType, typeof LogIn> = {
-  Login: LogIn,
-  Config: Settings,
-  Activation: Power,
-  Call: Phone,
-  Team: UserPlus,
-  Knowledge: FileText,
+const PAGE_SIZE = 15;
+
+const resourceIcons: Record<string, LucideIcon> = {
+  tenant: Building2,
+  agent: Bot,
+  call: Phone,
+  call_tool_run: Wrench,
 };
 
-const eventBadgeVariant: Record<EventType, "default" | "secondary" | "outline"> = {
-  Login: "secondary",
-  Config: "outline",
-  Activation: "default",
-  Call: "secondary",
-  Team: "outline",
-  Knowledge: "secondary",
-};
+function iconFor(resourceType: string): LucideIcon {
+  return resourceIcons[resourceType] ?? Activity;
+}
 
-const auditEvents: AuditEvent[] = [
-  {
-    id: 1,
-    type: "Login",
-    timestamp: "Today 2:34 PM",
-    actor: "Sarah Chen",
-    actorEmail: "sarah@acme.com",
-    action: "Sarah Chen logged in",
-    target: "Dashboard",
-  },
-  {
-    id: 2,
-    type: "Config",
-    timestamp: "Today 1:22 PM",
-    actor: "Mike Johnson",
-    actorEmail: "mike@acme.com",
-    action: "Mike Johnson updated agent voice settings",
-    target: "Agent Configuration",
-  },
-  {
-    id: 3,
-    type: "Call",
-    timestamp: "Today 12:45 PM",
-    actor: "AI Agent",
-    actorEmail: "system",
-    action: "AI Agent handled call from +1 (555) 234-5678",
-    target: "Inbound Call",
-  },
-  {
-    id: 4,
-    type: "Activation",
-    timestamp: "Today 11:15 AM",
-    actor: "Sarah Chen",
-    actorEmail: "sarah@acme.com",
-    action: "Sarah Chen activated agent v2.4.1",
-    target: "Agent Deployment",
-  },
-  {
-    id: 5,
-    type: "Team",
-    timestamp: "Today 10:30 AM",
-    actor: "Sarah Chen",
-    actorEmail: "sarah@acme.com",
-    action: "Sarah Chen invited alex@acme.com",
-    target: "Team Management",
-  },
-  {
-    id: 6,
-    type: "Knowledge",
-    timestamp: "Today 9:15 AM",
-    actor: "Emily Davis",
-    actorEmail: "emily@acme.com",
-    action: "Emily Davis uploaded Insurance Guide.pdf",
-    target: "Knowledge Base",
-  },
-  {
-    id: 7,
-    type: "Call",
-    timestamp: "Yesterday 4:22 PM",
-    actor: "AI Agent",
-    actorEmail: "system",
-    action: "AI Agent handled call from +1 (555) 876-5432",
-    target: "Inbound Call",
-  },
-  {
-    id: 8,
-    type: "Config",
-    timestamp: "Yesterday 3:10 PM",
-    actor: "Mike Johnson",
-    actorEmail: "mike@acme.com",
-    action: "Mike Johnson updated greeting message",
-    target: "Agent Configuration",
-  },
-  {
-    id: 9,
-    type: "Login",
-    timestamp: "Yesterday 2:00 PM",
-    actor: "Emily Davis",
-    actorEmail: "emily@acme.com",
-    action: "Emily Davis logged in",
-    target: "Dashboard",
-  },
-  {
-    id: 10,
-    type: "Knowledge",
-    timestamp: "Yesterday 11:45 AM",
-    actor: "Mike Johnson",
-    actorEmail: "mike@acme.com",
-    action: "Mike Johnson uploaded FAQ Document.pdf",
-    target: "Knowledge Base",
-  },
-  {
-    id: 11,
-    type: "Call",
-    timestamp: "Yesterday 10:30 AM",
-    actor: "AI Agent",
-    actorEmail: "system",
-    action: "AI Agent handled call from +1 (555) 345-6789",
-    target: "Inbound Call",
-  },
-  {
-    id: 12,
-    type: "Activation",
-    timestamp: "Jul 12, 2026 5:00 PM",
-    actor: "Sarah Chen",
-    actorEmail: "sarah@acme.com",
-    action: "Sarah Chen activated agent v2.4.0",
-    target: "Agent Deployment",
-  },
-];
+function humanizeAction(action: string): string {
+  return action
+    .split(/[._]/)
+    .filter(Boolean)
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ");
+}
 
-const eventTypes: EventType[] = [
-  "Login",
-  "Config",
-  "Activation",
-  "Call",
-  "Team",
-  "Knowledge",
-];
+function capitalize(value: string): string {
+  if (!value) return value;
+  return value.charAt(0).toUpperCase() + value.slice(1);
+}
+
+function formatEventTime(iso: string): string {
+  const date = new Date(iso);
+  const now = new Date();
+  const time = date.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
+
+  if (date.toDateString() === now.toDateString()) {
+    return `Today ${time}`;
+  }
+  const yesterday = new Date(now);
+  yesterday.setDate(now.getDate() - 1);
+  if (date.toDateString() === yesterday.toDateString()) {
+    return `Yesterday ${time}`;
+  }
+  return date.toLocaleString(undefined, {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
+function formatFullTimestamp(iso: string): string {
+  return new Date(iso).toLocaleString(undefined, {
+    dateStyle: "medium",
+    timeStyle: "medium",
+  });
+}
+
+function formatShortDate(iso: string): string {
+  return new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric" });
+}
 
 export default function AuditPage() {
-  const [search, setSearch] = useState("");
-  const [filterType, setFilterType] = useState<EventType | "All">("All");
-  const [expandedId, setExpandedId] = useState<number | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [events, setEvents] = useState<AuditEvent[]>([]);
+  const [truncated, setTruncated] = useState(false);
 
-  const filteredEvents = auditEvents.filter((event) => {
-    const matchesSearch =
-      search === "" ||
-      event.action.toLowerCase().includes(search.toLowerCase()) ||
-      event.actor.toLowerCase().includes(search.toLowerCase());
-    const matchesType = filterType === "All" || event.type === filterType;
-    return matchesSearch && matchesType;
-  });
+  const [search, setSearch] = useState("");
+  const [filterType, setFilterType] = useState<string>("All");
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+
+  useEffect(() => {
+    async function loadEvents() {
+      setLoading(true);
+      setLoadError(null);
+      try {
+        const res = await fetch("/api/v1/audit");
+        const data = await res.json();
+        if (!res.ok) {
+          setLoadError(data.error ?? "Failed to load audit events.");
+          return;
+        }
+        setEvents(data.events ?? []);
+        setTruncated(Boolean(data.truncated));
+      } catch {
+        setLoadError("Failed to load audit events. Please refresh the page.");
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadEvents();
+  }, []);
+
+  const eventTypes = useMemo(
+    () => Array.from(new Set(events.map((e) => e.resourceType))).sort(),
+    [events],
+  );
+
+  const filteredEvents = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    return events.filter((event) => {
+      const matchesSearch =
+        query === "" ||
+        event.action.toLowerCase().includes(query) ||
+        (event.actorName ?? "").toLowerCase().includes(query) ||
+        (event.actorEmail ?? "").toLowerCase().includes(query);
+      const matchesType = filterType === "All" || event.resourceType === filterType;
+      return matchesSearch && matchesType;
+    });
+  }, [events, search, filterType]);
+
+  // Reset to page 1 whenever the search/filter combination changes, so the
+  // footer count and visible slice always stay in sync with the active
+  // filters. Adjusting state directly during render (React's documented
+  // pattern for this) instead of via an effect avoids an extra render pass.
+  const filterKey = `${search}::${filterType}`;
+  const [lastFilterKey, setLastFilterKey] = useState(filterKey);
+  if (filterKey !== lastFilterKey) {
+    setLastFilterKey(filterKey);
+    setPage(1);
+  }
+
+  const totalFiltered = filteredEvents.length;
+  const totalPages = Math.max(1, Math.ceil(totalFiltered / PAGE_SIZE));
+  const currentPage = Math.min(page, totalPages);
+  const pageStart = totalFiltered === 0 ? 0 : (currentPage - 1) * PAGE_SIZE + 1;
+  const pageEnd = Math.min(currentPage * PAGE_SIZE, totalFiltered);
+  const pagedEvents = filteredEvents.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+
+  const dateRangeLabel =
+    events.length > 0
+      ? `${formatShortDate(events[events.length - 1].createdAt)} – ${formatShortDate(events[0].createdAt)}`
+      : null;
 
   return (
     <div className="space-y-6">
@@ -222,13 +197,13 @@ export default function AuditPage() {
               size="sm"
               onClick={() => setFilterType(type)}
             >
-              {type === "Config" ? "Config Change" : type}
+              {capitalize(type.replace(/_/g, " "))}
             </Button>
           ))}
         </div>
-        <span className="ml-auto text-sm text-muted-foreground">
-          Jul 1 &ndash; Jul 14, 2026
-        </span>
+        {dateRangeLabel && (
+          <span className="ml-auto text-sm text-muted-foreground">{dateRangeLabel}</span>
+        )}
       </div>
 
       <Card>
@@ -236,106 +211,138 @@ export default function AuditPage() {
           <CardTitle>Events</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="divide-y">
-            {filteredEvents.map((event) => {
-              const Icon = eventIcons[event.type];
-              const isExpanded = expandedId === event.id;
+          {loading ? (
+            <p className="py-6 text-sm text-muted-foreground">Loading audit events…</p>
+          ) : loadError ? (
+            <p className="py-6 text-sm text-destructive">{loadError}</p>
+          ) : filteredEvents.length === 0 ? (
+            <p className="py-6 text-sm text-muted-foreground">
+              {events.length === 0
+                ? "No audit events recorded for this workspace yet."
+                : "No events match your search or filter."}
+            </p>
+          ) : (
+            <div className="divide-y">
+              {pagedEvents.map((event) => {
+                const Icon = iconFor(event.resourceType);
+                const isExpanded = expandedId === event.id;
+                const actorLabel = event.actorName || event.actorEmail || "System";
 
-              return (
-                <div key={event.id}>
-                  <button
-                    type="button"
-                    className="flex w-full items-center gap-4 py-3 text-left transition-colors hover:bg-muted/50"
-                    onClick={() =>
-                      setExpandedId(isExpanded ? null : event.id)
-                    }
-                  >
-                    <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-muted">
-                      <Icon className="size-4 text-muted-foreground" />
-                    </div>
+                return (
+                  <div key={event.id}>
+                    <button
+                      type="button"
+                      className="flex w-full items-center gap-4 py-3 text-left transition-colors hover:bg-muted/50"
+                      onClick={() => setExpandedId(isExpanded ? null : event.id)}
+                    >
+                      <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-muted">
+                        <Icon className="size-4 text-muted-foreground" />
+                      </div>
 
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium">
-                        {event.action}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {event.actor}
-                        {event.actorEmail !== "system" &&
-                          ` (${event.actorEmail})`}
-                      </p>
-                    </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-medium">
+                          {humanizeAction(event.action)}
+                        </p>
+                        <p className="text-xs text-muted-foreground">{actorLabel}</p>
+                      </div>
 
-                    <Badge variant={eventBadgeVariant[event.type]}>
-                      {event.type}
-                    </Badge>
+                      <Badge variant="outline">{capitalize(event.resourceType.replace(/_/g, " "))}</Badge>
 
-                    <span className="shrink-0 text-xs text-muted-foreground">
-                      {event.timestamp}
-                    </span>
+                      <span className="shrink-0 text-xs text-muted-foreground">
+                        {formatEventTime(event.createdAt)}
+                      </span>
 
-                    {isExpanded ? (
-                      <ChevronDown className="size-4 shrink-0 text-muted-foreground" />
-                    ) : (
-                      <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
-                    )}
-                  </button>
+                      {isExpanded ? (
+                        <ChevronDown className="size-4 shrink-0 text-muted-foreground" />
+                      ) : (
+                        <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
+                      )}
+                    </button>
 
-                  {isExpanded && (
-                    <div className="mb-3 ml-12 rounded-lg border bg-muted/30 p-4">
-                      <div className="grid gap-2 text-sm">
-                        <div className="flex gap-2">
-                          <span className="font-medium text-muted-foreground">
-                            Event Type:
-                          </span>
-                          <span>{event.type}</span>
-                        </div>
-                        <div className="flex gap-2">
-                          <span className="font-medium text-muted-foreground">
-                            Actor:
-                          </span>
-                          <span>
-                            {event.actor}{" "}
-                            {event.actorEmail !== "system" &&
-                              `(${event.actorEmail})`}
-                          </span>
-                        </div>
-                        <div className="flex gap-2">
-                          <span className="font-medium text-muted-foreground">
-                            Target:
-                          </span>
-                          <span>{event.target}</span>
-                        </div>
-                        <div className="flex gap-2">
-                          <span className="font-medium text-muted-foreground">
-                            Timestamp:
-                          </span>
-                          <span>{event.timestamp}</span>
-                        </div>
-                        <div className="flex gap-2">
-                          <span className="font-medium text-muted-foreground">
-                            IP Address:
-                          </span>
-                          <span>192.168.1.***</span>
+                    {isExpanded && (
+                      <div className="mb-3 ml-12 rounded-lg border bg-muted/30 p-4">
+                        <div className="grid gap-2 text-sm">
+                          <div className="flex gap-2">
+                            <span className="font-medium text-muted-foreground">
+                              Event Type:
+                            </span>
+                            <span>{capitalize(event.resourceType.replace(/_/g, " "))}</span>
+                          </div>
+                          <div className="flex gap-2">
+                            <span className="font-medium text-muted-foreground">
+                              Action:
+                            </span>
+                            <span className="font-mono text-xs">{event.action}</span>
+                          </div>
+                          <div className="flex gap-2">
+                            <span className="font-medium text-muted-foreground">
+                              Actor:
+                            </span>
+                            <span>
+                              {event.actorName || event.actorEmail
+                                ? `${event.actorName ?? ""}${
+                                    event.actorEmail ? ` (${event.actorEmail})` : ""
+                                  }`.trim()
+                                : "System"}
+                            </span>
+                          </div>
+                          {event.resourceId && (
+                            <div className="flex gap-2">
+                              <span className="font-medium text-muted-foreground">
+                                Resource ID:
+                              </span>
+                              <span className="font-mono text-xs">{event.resourceId}</span>
+                            </div>
+                          )}
+                          <div className="flex gap-2">
+                            <span className="font-medium text-muted-foreground">
+                              Timestamp:
+                            </span>
+                            <span>{formatFullTimestamp(event.createdAt)}</span>
+                          </div>
+                          {event.metadata != null && (
+                            <div className="flex gap-2">
+                              <span className="font-medium text-muted-foreground">
+                                Details:
+                              </span>
+                              <code className="whitespace-pre-wrap text-xs">
+                                {JSON.stringify(event.metadata, null, 2)}
+                              </code>
+                            </div>
+                          )}
                         </div>
                       </div>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </CardContent>
       </Card>
 
       <div className="flex items-center justify-between">
         <p className="text-sm text-muted-foreground">
-          Showing 1&ndash;12 of 48 events
+          {totalFiltered === 0
+            ? "Showing 0 events"
+            : `Showing ${pageStart}–${pageEnd} of ${totalFiltered} events`}
+          {truncated && " (limited to the 300 most recent)"}
         </p>
         <div className="flex gap-2">
-          <Button variant="outline" size="sm" disabled>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={currentPage <= 1}
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
+          >
             Previous
           </Button>
-          <Button variant="outline" size="sm">
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={currentPage >= totalPages}
+            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+          >
             Next
           </Button>
         </div>

@@ -155,10 +155,14 @@ export default function OnboardingPage() {
       {/* Sticky footer */}
       <div className="sticky bottom-0 border-t bg-background px-6 py-4">
         <div className="mx-auto flex max-w-3xl items-center justify-between">
-          <Button variant="outline" onClick={goBack} disabled={isFirst}>
-            <ChevronLeft className="mr-1 size-4" />
-            Back
-          </Button>
+          {isFirst ? (
+            <div />
+          ) : (
+            <Button variant="outline" onClick={goBack}>
+              <ChevronLeft className="mr-1 size-4" />
+              Back
+            </Button>
+          )}
 
           <div className="flex gap-2">
             {meta.skippable && !isLast && (
