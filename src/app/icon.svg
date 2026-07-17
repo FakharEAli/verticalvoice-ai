@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" role="img" aria-label="VerticalVoice AI">
+  <rect width="64" height="64" rx="15" fill="#101319"></rect>
+  <g transform="translate(12 12) scale(1)">
+  <rect x="6" y="15" width="4" height="10" rx="2" fill="#C9A85F"></rect>
+  <rect x="13" y="10" width="4" height="20" rx="2" fill="#D8BE86"></rect>
+  <rect x="20" y="4" width="4" height="32" rx="2" fill="#E4CE95"></rect>
+  <rect x="27" y="10" width="4" height="20" rx="2" fill="#D8BE86"></rect>
+  <rect x="34" y="15" width="4" height="10" rx="2" fill="#C9A85F"></rect>
+  </g>
+</svg>

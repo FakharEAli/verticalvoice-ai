@@ -6,10 +6,15 @@ import { cn } from "@/lib/utils"
 
 function Progress({
   className,
+  indicatorClassName,
   children,
   value,
   ...props
-}: ProgressPrimitive.Root.Props) {
+}: ProgressPrimitive.Root.Props & {
+  // Override the fill color for threshold states, e.g.
+  // indicatorClassName="bg-warning" or "bg-destructive" on usage meters.
+  indicatorClassName?: string
+}) {
   return (
     <ProgressPrimitive.Root
       value={value}
@@ -19,7 +24,7 @@ function Progress({
     >
       {children}
       <ProgressTrack>
-        <ProgressIndicator />
+        <ProgressIndicator className={indicatorClassName} />
       </ProgressTrack>
     </ProgressPrimitive.Root>
   )

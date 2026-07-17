@@ -2,7 +2,7 @@ export const brand = {
   name: 'VerticalVoice AI',
   tagline: 'AI-Powered Calling Agents for Every Vertical',
   domain: 'verticalvoice.ai',
-  logo: '/logo.svg',
+  logo: '/logo/full.svg',
   logoAlt: 'VerticalVoice AI Logo',
 
   colors: {

@@ -1,12 +1,24 @@
 import type { Metadata } from 'next';
-import { Inter } from 'next/font/google';
+import { Geist, Geist_Mono, Instrument_Serif } from 'next/font/google';
 import { Toaster } from '@/components/ui/sonner';
 import { Providers } from './providers';
 import { brand } from '@/config/brand';
 import './globals.css';
 
-const inter = Inter({
+const geist = Geist({
   variable: '--font-sans',
+  subsets: ['latin'],
+});
+
+const geistMono = Geist_Mono({
+  variable: '--font-geist-mono',
+  subsets: ['latin'],
+});
+
+const serif = Instrument_Serif({
+  variable: '--font-heading',
+  weight: '400',
+  style: ['normal', 'italic'],
   subsets: ['latin'],
 });
 
@@ -24,7 +36,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${inter.variable} h-full antialiased`}>
+    <html lang="en" className={`${geist.variable} ${geistMono.variable} ${serif.variable} h-full antialiased`}>
       <body className="min-h-full flex flex-col font-sans">
         <Providers>
           {children}

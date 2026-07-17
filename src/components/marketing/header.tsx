@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { brand } from '@/config/brand';
 import { Button } from '@/components/ui/button';
 
@@ -26,13 +27,29 @@ export function MarketingHeader() {
   const [industriesOpen, setIndustriesOpen] = useState(false);
 
   return (
-    <header className="sticky top-0 z-50 border-b bg-background/80 backdrop-blur-lg">
+    <header className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur-lg">
       <nav className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
-        <Link href="/" className="flex items-center gap-2.5">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground font-bold text-sm">
-            V
-          </div>
-          <span className="text-lg font-bold tracking-tight">{brand.name}</span>
+        <Link
+          href="/"
+          className="flex min-h-11 items-center"
+          aria-label={brand.name}
+        >
+          <Image
+            src="/logo/full.svg"
+            alt={brand.logoAlt}
+            width={161}
+            height={30}
+            priority
+            className="h-7 w-auto dark:hidden"
+          />
+          <Image
+            src="/logo/full-reversed.svg"
+            alt={brand.logoAlt}
+            width={161}
+            height={30}
+            priority
+            className="hidden h-7 w-auto dark:block"
+          />
         </Link>
 
         {/* Desktop nav */}
@@ -47,20 +64,24 @@ export function MarketingHeader() {
               >
                 <Link
                   href={link.href}
-                  className="inline-flex items-center gap-1 rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
+                  className="group relative inline-flex min-h-11 items-center gap-1 px-3 text-sm text-muted-foreground transition-colors hover:text-foreground"
                   aria-haspopup="true"
                   aria-expanded={industriesOpen}
                 >
                   {link.label}
                   <ChevronDownIcon className="h-3.5 w-3.5" aria-hidden="true" />
+                  <span
+                    aria-hidden="true"
+                    className="pointer-events-none absolute inset-x-3 bottom-2 h-px origin-left scale-x-0 bg-brand transition-transform duration-150 ease-out group-hover:scale-x-100"
+                  />
                 </Link>
                 {industriesOpen && (
-                  <div className="absolute left-0 top-full z-50 mt-1 w-56 rounded-lg border bg-background p-2 shadow-lg">
+                  <div className="absolute left-0 top-full z-50 mt-1 w-56 rounded-lg border border-border bg-background p-2 shadow-lg">
                     {link.children.map((child) => (
                       <Link
                         key={child.href}
                         href={child.href}
-                        className="block rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                        className="flex min-h-11 items-center rounded-md px-3 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                       >
                         {child.label}
                       </Link>
@@ -72,29 +93,33 @@ export function MarketingHeader() {
               <Link
                 key={link.label}
                 href={link.href}
-                className="rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
+                className="group relative inline-flex min-h-11 items-center px-3 text-sm text-muted-foreground transition-colors hover:text-foreground"
               >
                 {link.label}
+                <span
+                  aria-hidden="true"
+                  className="pointer-events-none absolute inset-x-3 bottom-2 h-px origin-left scale-x-0 bg-brand transition-transform duration-150 ease-out group-hover:scale-x-100"
+                />
               </Link>
             )
           )}
         </div>
 
-        <div className="hidden items-center gap-3 lg:flex">
+        <div className="hidden items-center gap-2 lg:flex">
           <Link href="/login">
-            <Button variant="ghost" size="sm">
+            <Button variant="ghost" className="min-h-11 px-4">
               Sign in
             </Button>
           </Link>
           <Link href="/signup">
-            <Button size="sm">{brand.copy.ctaButton}</Button>
+            <Button className="min-h-11 px-5">{brand.copy.ctaButton}</Button>
           </Link>
         </div>
 
         {/* Mobile menu button */}
         <button
           type="button"
-          className="lg:hidden"
+          className="inline-flex h-11 w-11 items-center justify-center rounded-md text-foreground lg:hidden"
           onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
           aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'}
           aria-expanded={mobileMenuOpen}
@@ -123,13 +148,13 @@ export function MarketingHeader() {
 
       {/* Mobile nav */}
       {mobileMenuOpen && (
-        <div id="mobile-nav" className="border-t px-4 py-4 lg:hidden">
-          <div className="flex flex-col gap-1">
+        <div id="mobile-nav" className="border-t border-border px-4 py-4 lg:hidden">
+          <div className="flex flex-col gap-0.5">
             {navLinks.map((link) => (
               <div key={link.label}>
                 <Link
                   href={link.href}
-                  className="block rounded-md px-3 py-2 text-sm text-muted-foreground hover:text-foreground"
+                  className="flex min-h-11 items-center rounded-md px-3 text-sm text-muted-foreground hover:text-foreground"
                   onClick={() => setMobileMenuOpen(false)}
                 >
                   {link.label}
@@ -140,7 +165,7 @@ export function MarketingHeader() {
                       <Link
                         key={child.href}
                         href={child.href}
-                        className="block rounded-md px-3 py-2 text-sm text-muted-foreground/70 hover:text-foreground"
+                        className="flex min-h-11 items-center rounded-md px-3 text-sm text-muted-foreground/70 hover:text-foreground"
                         onClick={() => setMobileMenuOpen(false)}
                       >
                         {child.label}
@@ -150,14 +175,14 @@ export function MarketingHeader() {
                 )}
               </div>
             ))}
-            <div className="mt-3 flex gap-2 border-t pt-3">
+            <div className="mt-3 flex gap-2 border-t border-border pt-3">
               <Link href="/login" className="flex-1">
-                <Button variant="outline" className="w-full" size="sm">
+                <Button variant="outline" className="min-h-11 w-full">
                   Sign in
                 </Button>
               </Link>
               <Link href="/signup" className="flex-1">
-                <Button className="w-full" size="sm">
+                <Button className="min-h-11 w-full">
                   {brand.copy.ctaButton}
                 </Button>
               </Link>

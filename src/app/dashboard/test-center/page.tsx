@@ -172,6 +172,22 @@ export default function TestCenterPage() {
     };
   }, []);
 
+  function describeCallError(err: unknown): string {
+    if (err instanceof Error && err.message) return err.message;
+    if (err && typeof err === "object") {
+      const anyErr = err as Record<string, unknown>;
+      const parts = [anyErr.message, anyErr.code, anyErr.name]
+        .filter((p) => typeof p === "string" && p.length > 0);
+      if (parts.length > 0) return parts.join(" — ");
+      try {
+        return JSON.stringify(err);
+      } catch {
+        // fall through
+      }
+    }
+    return `Failed to start the call (unrecognized error: ${String(err)}).`;
+  }
+
   async function handleStartBrowserCall() {
     setCallError(null);
     setCallStatus("connecting");
@@ -186,8 +202,17 @@ export default function TestCenterPage() {
         return;
       }
 
-      const device = new Device(body.token, { logLevel: "error" });
+      const device = new Device(body.token, { logLevel: "debug" });
       deviceRef.current = device;
+
+      device.on("error", (err: unknown) => {
+        console.error("[live-test-call] Device error:", err);
+        setCallStatus("error");
+        setCallError(describeCallError(err));
+      });
+      device.on("tokenWillExpire", () => {
+        console.warn("[live-test-call] Access token will expire soon");
+      });
 
       const call = await device.connect({ params: { To: body.toNumber } });
       activeCallRef.current = call;
@@ -206,13 +231,15 @@ export default function TestCenterPage() {
       });
       call.on("cancel", () => setCallStatus("ended"));
       call.on("reject", () => setCallStatus("ended"));
-      call.on("error", (err: Error) => {
+      call.on("error", (err: unknown) => {
+        console.error("[live-test-call] Call error:", err);
         setCallStatus("error");
-        setCallError(err.message);
+        setCallError(describeCallError(err));
       });
     } catch (err) {
+      console.error("[live-test-call] handleStartBrowserCall threw:", err);
       setCallStatus("error");
-      setCallError(err instanceof Error ? err.message : "Failed to start the call.");
+      setCallError(describeCallError(err));
     }
   }
 

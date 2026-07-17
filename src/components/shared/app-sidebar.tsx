@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutDashboard,
@@ -18,7 +19,6 @@ import {
   Shield,
   LogOut,
   ChevronsUpDown,
-  Zap,
 } from "lucide-react";
 
 import {
@@ -127,6 +127,21 @@ interface AppSidebarProps {
   };
 }
 
+// Active nav styling: the shadcn sidebar variants already paint the brass wash
+// (data-active:bg-sidebar-accent). On top of that we add a 2px brass LEFT
+// indicator bar and tint the icon + label with the brass accent.
+//
+// Vertical tinting hook: this component has no active-vertical concept yet, so the
+// accent defaults to brass (`brand`). To tint per active workspace, swap `brand`
+// below for the matching vertical token, e.g. text-vertical-healthcare and
+// before:bg-vertical-healthcare (supported: healthcare | restaurant | realestate).
+const navItemClass =
+  "relative [&_svg]:text-muted-foreground hover:[&_svg]:text-sidebar-accent-foreground " +
+  "data-active:text-brand data-active:[&_svg]:text-brand " +
+  "data-active:before:absolute data-active:before:left-0 data-active:before:top-1/2 " +
+  "data-active:before:h-4 data-active:before:w-0.5 data-active:before:-translate-y-1/2 " +
+  "data-active:before:rounded-full data-active:before:bg-brand";
+
 export function AppSidebar({ user }: AppSidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
@@ -164,8 +179,15 @@ export function AppSidebar({ user }: AppSidebarProps) {
               size="lg"
               render={<a href="/dashboard/overview" />}
             >
-              <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-                <Zap className="size-4" aria-hidden="true" />
+              <div className="flex aspect-square size-8 items-center justify-center">
+                <Image
+                  src="/logo/mark.svg"
+                  width={32}
+                  height={32}
+                  alt="VerticalVoice"
+                  className="size-8 rounded-lg"
+                  priority
+                />
               </div>
               <div className="grid flex-1 text-left text-sm leading-tight">
                 <span className="truncate font-semibold">VerticalVoice</span>
@@ -180,7 +202,9 @@ export function AppSidebar({ user }: AppSidebarProps) {
 
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel>Platform</SidebarGroupLabel>
+          <SidebarGroupLabel className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+            Platform
+          </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {mainNavItems.map((item) => (
@@ -189,6 +213,7 @@ export function AppSidebar({ user }: AppSidebarProps) {
                     render={<a href={item.url} />}
                     isActive={isActive(item.url)}
                     tooltip={item.title}
+                    className={navItemClass}
                   >
                     <item.icon aria-hidden="true" />
                     <span>{item.title}</span>
@@ -202,7 +227,9 @@ export function AppSidebar({ user }: AppSidebarProps) {
         <SidebarSeparator />
 
         <SidebarGroup>
-          <SidebarGroupLabel>Account</SidebarGroupLabel>
+          <SidebarGroupLabel className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+            Account
+          </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {bottomNavItems.map((item) => (
@@ -211,6 +238,7 @@ export function AppSidebar({ user }: AppSidebarProps) {
                     render={<a href={item.url} />}
                     isActive={isActive(item.url)}
                     tooltip={item.title}
+                    className={navItemClass}
                   >
                     <item.icon aria-hidden="true" />
                     <span>{item.title}</span>
@@ -230,7 +258,7 @@ export function AppSidebar({ user }: AppSidebarProps) {
                 render={
                   <SidebarMenuButton
                     size="lg"
-                    className="data-popup-open:bg-sidebar-accent data-popup-open:text-sidebar-accent-foreground"
+                    className="data-popup-open:bg-sidebar-accent data-popup-open:text-sidebar-accent-foreground focus-visible:ring-2 focus-visible:ring-sidebar-ring"
                   />
                 }
               >
