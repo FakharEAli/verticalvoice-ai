@@ -26,6 +26,25 @@ import {
 import { createServerClient } from "@/lib/database/supabase-server";
 import { getCurrentTenantId } from "@/domain/tenants/current";
 
+/**
+ * Test Center's Live Test Call runs through this exact same pipeline as a
+ * real customer call, so anything it books (appointments, reservations,
+ * leads...) would otherwise show up here indistinguishable from real
+ * business data. Filter it out by call_id rather than a per-table flag,
+ * since calls.is_test is the single source of truth.
+ */
+async function getTestCallIds(
+  supabase: Awaited<ReturnType<typeof createServerClient>>,
+  tenantId: string
+): Promise<Set<string>> {
+  const { data } = await supabase.from("calls").select("id").eq("tenant_id", tenantId).eq("is_test", true);
+  return new Set((data ?? []).map((c) => c.id));
+}
+
+function excludeTestCalls<T extends { call_id: string | null }>(rows: T[] | null, testCallIds: Set<string>): T[] {
+  return (rows ?? []).filter((r) => !r.call_id || !testCallIds.has(r.call_id));
+}
+
 type BadgeVariant = "success" | "warning" | "destructive" | "outline";
 
 const STATUS_SUCCESS = ["confirmed", "verified", "approved", "active", "ready", "delivered", "resolved", "completed"];
@@ -90,35 +109,42 @@ async function HealthcarePanel({ supabase, tenantId }: { supabase: Awaited<Retur
   const t = VERTICAL_TINT.healthcare;
   const nowIso = new Date().toISOString();
 
-  const [{ data: appointments }, { data: waitlist }, { data: refills }, { data: insurance }] = await Promise.all([
-    supabase
-      .from("appointments")
-      .select("id, call_id, patient_name, scheduled_at, reason, status")
-      .eq("tenant_id", tenantId)
-      .neq("status", "cancelled")
-      .gte("scheduled_at", nowIso)
-      .order("scheduled_at", { ascending: true })
-      .limit(10),
-    supabase
-      .from("waitlist_entries")
-      .select("id, patient_name, status, priority, created_at")
-      .eq("tenant_id", tenantId)
-      .eq("status", "waiting")
-      .order("priority", { ascending: false })
-      .limit(10),
-    supabase
-      .from("refill_requests")
-      .select("id, call_id, patient_name, medication_name, status")
-      .eq("tenant_id", tenantId)
-      .order("created_at", { ascending: false })
-      .limit(10),
-    supabase
-      .from("insurance_intakes")
-      .select("id, call_id, patient_name, insurance_provider, status")
-      .eq("tenant_id", tenantId)
-      .order("created_at", { ascending: false })
-      .limit(10),
-  ]);
+  const [testCallIds, { data: appointmentRows }, { data: waitlistRows }, { data: refillRows }, { data: insuranceRows }] =
+    await Promise.all([
+      getTestCallIds(supabase, tenantId),
+      supabase
+        .from("appointments")
+        .select("id, call_id, patient_name, scheduled_at, reason, status")
+        .eq("tenant_id", tenantId)
+        .neq("status", "cancelled")
+        .gte("scheduled_at", nowIso)
+        .order("scheduled_at", { ascending: true })
+        .limit(20),
+      supabase
+        .from("waitlist_entries")
+        .select("id, call_id, patient_name, status, priority, created_at")
+        .eq("tenant_id", tenantId)
+        .eq("status", "waiting")
+        .order("priority", { ascending: false })
+        .limit(20),
+      supabase
+        .from("refill_requests")
+        .select("id, call_id, patient_name, medication_name, status")
+        .eq("tenant_id", tenantId)
+        .order("created_at", { ascending: false })
+        .limit(20),
+      supabase
+        .from("insurance_intakes")
+        .select("id, call_id, patient_name, insurance_provider, status")
+        .eq("tenant_id", tenantId)
+        .order("created_at", { ascending: false })
+        .limit(20),
+    ]);
+
+  const appointments = excludeTestCalls(appointmentRows, testCallIds).slice(0, 10);
+  const waitlist = excludeTestCalls(waitlistRows, testCallIds).slice(0, 10);
+  const refills = excludeTestCalls(refillRows, testCallIds).slice(0, 10);
+  const insurance = excludeTestCalls(insuranceRows, testCallIds).slice(0, 10);
 
   return (
     <div className="grid gap-6 lg:grid-cols-2">
@@ -252,32 +278,38 @@ async function RestaurantPanel({ supabase, tenantId }: { supabase: Awaited<Retur
   const t = VERTICAL_TINT.restaurant;
   const nowIso = new Date().toISOString();
 
-  const [{ data: reservations }, { data: orders }, { data: menuItems }, { data: cateringLeads }] = await Promise.all([
-    supabase
-      .from("reservations")
-      .select("id, call_id, guest_name, party_size, scheduled_at, status, special_requests")
-      .eq("tenant_id", tenantId)
-      .neq("status", "cancelled")
-      .gte("scheduled_at", nowIso)
-      .order("scheduled_at", { ascending: true })
-      .limit(10),
-    supabase
-      .from("orders")
-      .select("id, call_id, order_number, order_type, status, total_cents, created_at")
-      .eq("tenant_id", tenantId)
-      .order("created_at", { ascending: false })
-      .limit(10),
-    supabase
-      .from("menu_items")
-      .select("id, updated_at")
-      .eq("tenant_id", tenantId),
-    supabase
-      .from("catering_leads")
-      .select("id, call_id, contact_name, event_date, guest_count, status")
-      .eq("tenant_id", tenantId)
-      .order("created_at", { ascending: false })
-      .limit(10),
-  ]);
+  const [testCallIds, { data: reservationRows }, { data: orderRows }, { data: menuItems }, { data: cateringLeadRows }] =
+    await Promise.all([
+      getTestCallIds(supabase, tenantId),
+      supabase
+        .from("reservations")
+        .select("id, call_id, guest_name, party_size, scheduled_at, status, special_requests")
+        .eq("tenant_id", tenantId)
+        .neq("status", "cancelled")
+        .gte("scheduled_at", nowIso)
+        .order("scheduled_at", { ascending: true })
+        .limit(20),
+      supabase
+        .from("orders")
+        .select("id, call_id, order_number, order_type, status, total_cents, created_at")
+        .eq("tenant_id", tenantId)
+        .order("created_at", { ascending: false })
+        .limit(20),
+      supabase
+        .from("menu_items")
+        .select("id, updated_at")
+        .eq("tenant_id", tenantId),
+      supabase
+        .from("catering_leads")
+        .select("id, call_id, contact_name, event_date, guest_count, status")
+        .eq("tenant_id", tenantId)
+        .order("created_at", { ascending: false })
+        .limit(20),
+    ]);
+
+  const reservations = excludeTestCalls(reservationRows, testCallIds).slice(0, 10);
+  const orders = excludeTestCalls(orderRows, testCallIds).slice(0, 10);
+  const cateringLeads = excludeTestCalls(cateringLeadRows, testCallIds).slice(0, 10);
 
   const menuCount = menuItems?.length ?? 0;
   const lastMenuUpdate = menuItems?.length
@@ -426,41 +458,44 @@ async function RealEstatePanel({ supabase, tenantId }: { supabase: Awaited<Retur
   const t = VERTICAL_TINT.realestate;
   const nowIso = new Date().toISOString();
 
-  const [{ data: leads }, { data: showingRows }, { data: listings }, { data: maintenanceRows }] = await Promise.all([
-    supabase
-      .from("real_estate_leads")
-      .select("id, call_id, first_name, last_name, lead_type, budget_min_cents, budget_max_cents, source, status")
-      .eq("tenant_id", tenantId)
-      .order("created_at", { ascending: false })
-      .limit(10),
-    supabase
-      .from("showings")
-      .select("id, call_id, scheduled_at, status, listing_id, agent_id")
-      .eq("tenant_id", tenantId)
-      .gte("scheduled_at", nowIso)
-      .order("scheduled_at", { ascending: true })
-      .limit(10),
-    supabase
-      .from("listings")
-      .select("id, address_line1, city, state, price_cents, status")
-      .eq("tenant_id", tenantId)
-      .eq("status", "active")
-      .limit(6),
-    supabase
-      .from("maintenance_requests")
-      .select("id, call_id, category, priority, status, unit_id")
-      .eq("tenant_id", tenantId)
-      .neq("status", "completed")
-      .order("created_at", { ascending: false })
-      .limit(10),
-  ]);
+  const [testCallIds, { data: leadRows }, { data: showingRows }, { data: listings }, { data: maintenanceRows }] =
+    await Promise.all([
+      getTestCallIds(supabase, tenantId),
+      supabase
+        .from("real_estate_leads")
+        .select("id, call_id, first_name, last_name, lead_type, budget_min_cents, budget_max_cents, source, status")
+        .eq("tenant_id", tenantId)
+        .order("created_at", { ascending: false })
+        .limit(20),
+      supabase
+        .from("showings")
+        .select("id, call_id, scheduled_at, status, listing_id, agent_id")
+        .eq("tenant_id", tenantId)
+        .gte("scheduled_at", nowIso)
+        .order("scheduled_at", { ascending: true })
+        .limit(20),
+      supabase
+        .from("listings")
+        .select("id, address_line1, city, state, price_cents, status")
+        .eq("tenant_id", tenantId)
+        .eq("status", "active")
+        .limit(6),
+      supabase
+        .from("maintenance_requests")
+        .select("id, call_id, category, priority, status, unit_id")
+        .eq("tenant_id", tenantId)
+        .neq("status", "completed")
+        .order("created_at", { ascending: false })
+        .limit(20),
+    ]);
 
   // Embedded foreign-table selects (showings->listings/re_agents,
   // maintenance_requests->property_management_units) don't type-check
   // cleanly against the generated Database types at this join depth, so
   // resolve the small number of referenced rows separately and join in JS.
-  const showings = showingRows ?? [];
-  const maintenance = maintenanceRows ?? [];
+  const leads = excludeTestCalls(leadRows, testCallIds).slice(0, 10);
+  const showings = excludeTestCalls(showingRows, testCallIds).slice(0, 10);
+  const maintenance = excludeTestCalls(maintenanceRows, testCallIds).slice(0, 10);
 
   const listingIds = [...new Set(showings.map((s) => s.listing_id).filter(Boolean))];
   const agentIds = [...new Set(showings.map((s) => s.agent_id).filter((id): id is string => !!id))];

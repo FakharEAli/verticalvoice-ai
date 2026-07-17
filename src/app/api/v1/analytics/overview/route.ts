@@ -57,6 +57,7 @@ export async function GET(request: NextRequest) {
       .from("calls")
       .select("*")
       .eq("tenant_id", parsed.data.tenant_id)
+      .eq("is_test", false)
       .gte("created_at", fromDate)
       .lte("created_at", toDate);
 

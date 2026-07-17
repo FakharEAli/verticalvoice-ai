@@ -290,6 +290,7 @@ export interface Database {
           recording_url: string | null;
           outbound_purpose: string | null;
           outbound_context: Json | null;
+          is_test: boolean;
           created_at: string;
           updated_at: string;
         };
@@ -307,6 +308,7 @@ export interface Database {
           recording_url?: string | null;
           outbound_purpose?: string | null;
           outbound_context?: Json | null;
+          is_test?: boolean;
           created_at?: string;
           updated_at?: string;
         };
@@ -324,6 +326,7 @@ export interface Database {
           recording_url?: string | null;
           outbound_purpose?: string | null;
           outbound_context?: Json | null;
+          is_test?: boolean;
           created_at?: string;
           updated_at?: string;
         };

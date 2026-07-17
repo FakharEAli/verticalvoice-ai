@@ -6,6 +6,7 @@ export interface ToolHandlerContext {
   tenantId: string;
   callId: string;
   input: Record<string, unknown>;
+  isTest: boolean;
 }
 
 export type ToolHandler = (ctx: ToolHandlerContext) => Promise<Record<string, unknown>>;

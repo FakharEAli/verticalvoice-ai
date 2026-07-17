@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import {
@@ -12,6 +13,11 @@ import {
   Send,
   FlaskConical,
   Loader2,
+  History,
+  Trash2,
+  Mic,
+  FileText,
+  Wrench,
 } from "lucide-react";
 import {
   Card,
@@ -26,6 +32,17 @@ import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
 import { LiveCallOrb, type LiveCallOrbState } from "@/components/shared/live-call-orb";
+
+interface TestCall {
+  id: string;
+  status: string;
+  duration_seconds: number | null;
+  started_at: string;
+  has_recording: boolean;
+  has_transcript: boolean;
+  tool_run_count: number;
+  outcome_type: string | null;
+}
 
 interface AnalyzeResult {
   matched: boolean;
@@ -172,6 +189,58 @@ export default function TestCenterPage() {
   const activeCallRef = useRef<import("@twilio/voice-sdk").Call | null>(null);
   const durationIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  const [testCalls, setTestCalls] = useState<TestCall[]>([]);
+  const [loadingTestCalls, setLoadingTestCalls] = useState(true);
+  const [clearingTestData, setClearingTestData] = useState(false);
+
+  async function loadTestCalls() {
+    setLoadingTestCalls(true);
+    try {
+      const res = await fetch("/api/v1/test-center/calls");
+      const body = await res.json();
+      if (res.ok) setTestCalls(body.data ?? []);
+    } catch {
+      // Non-fatal — the section just stays empty; the live call itself isn't affected.
+    } finally {
+      setLoadingTestCalls(false);
+    }
+  }
+
+  useEffect(() => {
+    async function initialLoad() {
+      await loadTestCalls();
+    }
+    initialLoad();
+  }, []);
+
+  async function handleClearTestData() {
+    if (!confirm(`Delete all ${testCalls.length} test call(s) and everything they created (recordings, transcripts, bookings)? This can't be undone.`)) {
+      return;
+    }
+    setClearingTestData(true);
+    try {
+      const res = await fetch("/api/v1/test-center/calls", { method: "DELETE" });
+      const body = await res.json();
+      if (!res.ok) {
+        toast.error(body.error ?? "Failed to clear test data.");
+        return;
+      }
+      toast.success(`Cleared ${body.data.deleted_calls} test call(s).`);
+      setTestCalls([]);
+    } catch {
+      toast.error("Failed to clear test data.");
+    } finally {
+      setClearingTestData(false);
+    }
+  }
+
+  function formatTestCallDuration(seconds: number | null): string {
+    if (seconds == null) return "--";
+    const m = Math.floor(seconds / 60);
+    const s = Math.round(seconds % 60);
+    return `${m}:${s.toString().padStart(2, "0")}`;
+  }
+
   useEffect(() => {
     return () => {
       activeCallRef.current?.disconnect();
@@ -222,7 +291,7 @@ export default function TestCenterPage() {
         console.warn("[live-test-call] Access token will expire soon");
       });
 
-      const call = await device.connect({ params: { To: body.toNumber } });
+      const call = await device.connect({ params: { To: body.toNumber, IsTestCall: "true" } });
       activeCallRef.current = call;
 
       call.on("ringing", () => setCallStatus("ringing"));
@@ -236,6 +305,8 @@ export default function TestCenterPage() {
       call.on("disconnect", () => {
         setCallStatus("ended");
         if (durationIntervalRef.current) clearInterval(durationIntervalRef.current);
+        // Give the call.ended webhook (recording/summary) a moment to land.
+        setTimeout(loadTestCalls, 4000);
       });
       call.on("cancel", () => setCallStatus("ended"));
       call.on("reject", () => setCallStatus("ended"));
@@ -454,6 +525,95 @@ export default function TestCenterPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Test Call History */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <History className="size-5" />
+                Test Call History
+              </CardTitle>
+              <CardDescription>
+                Recording, transcript, and every action your agent took during each Live
+                Test Call — kept separate from real bookings and wipeable any time.
+              </CardDescription>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              className="shrink-0 gap-2 text-destructive hover:text-destructive"
+              onClick={handleClearTestData}
+              disabled={clearingTestData || testCalls.length === 0}
+            >
+              {clearingTestData ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                <Trash2 className="size-4" />
+              )}
+              Clear Test Data
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {loadingTestCalls ? (
+            <div className="flex items-center justify-center py-10 text-muted-foreground">
+              <Loader2 className="mr-2 size-4 animate-spin" />
+              Loading test calls...
+            </div>
+          ) : testCalls.length === 0 ? (
+            <p className="py-8 text-center text-sm text-muted-foreground">
+              No test calls yet — start a Live Test Call above and it will show up here
+              with its recording, transcript, and any actions the agent took.
+            </p>
+          ) : (
+            <div className="space-y-2">
+              {testCalls.map((c) => (
+                <Link
+                  key={c.id}
+                  href={`/dashboard/calls/${c.id}`}
+                  className="flex items-center justify-between rounded-lg border p-3 transition-colors hover:bg-muted/50"
+                >
+                  <div className="flex items-center gap-3">
+                    <Badge variant="outline" className="capitalize">
+                      {c.status.replace(/_/g, " ")}
+                    </Badge>
+                    <div>
+                      <p className="text-sm font-medium">
+                        {new Date(c.started_at).toLocaleString(undefined, {
+                          month: "short",
+                          day: "numeric",
+                          hour: "numeric",
+                          minute: "2-digit",
+                        })}
+                      </p>
+                      <p className="font-mono text-xs text-muted-foreground">
+                        {formatTestCallDuration(c.duration_seconds)}
+                        {c.outcome_type ? ` · ${c.outcome_type.replace(/_/g, " ")}` : ""}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                    <span className={`flex items-center gap-1 ${c.has_recording ? "text-foreground" : ""}`}>
+                      <Mic className="size-3.5" />
+                      {c.has_recording ? "Recording" : "No recording"}
+                    </span>
+                    <span className={`flex items-center gap-1 ${c.has_transcript ? "text-foreground" : ""}`}>
+                      <FileText className="size-3.5" />
+                      {c.has_transcript ? "Transcript" : "No transcript"}
+                    </span>
+                    <span className={`flex items-center gap-1 ${c.tool_run_count > 0 ? "text-foreground" : ""}`}>
+                      <Wrench className="size-3.5" />
+                      {c.tool_run_count} action{c.tool_run_count === 1 ? "" : "s"}
+                    </span>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Scenario Runner */}
       <Card>

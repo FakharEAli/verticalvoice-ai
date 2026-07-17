@@ -48,6 +48,7 @@ export async function POST(
       tenantId: auth.tenant_id,
       callId: auth.call_id,
       input,
+      isTest: auth.is_test,
     });
 
     await supabase.from("call_tool_runs").insert({
@@ -63,7 +64,9 @@ export async function POST(
     // Fire a staff notification for genuinely positive outcomes only (the
     // handler's own {booked:true}/{confirmed:true}/etc marker) — not for
     // read-only lookups like check_availability/get_menu/search_listings.
-    if (POSITIVE_OUTCOME_KEYS.some((k) => output[k] === true)) {
+    // Never for test calls: a business owner testing their agent shouldn't
+    // get spammed with "new booking" emails for their own test bookings.
+    if (!auth.is_test && POSITIVE_OUTCOME_KEYS.some((k) => output[k] === true)) {
       await notifyStaff(supabase, {
         tenantId: auth.tenant_id,
         type: toolId,

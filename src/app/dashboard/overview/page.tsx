@@ -166,11 +166,16 @@ export default async function OverviewPage() {
       .select("id, number, status")
       .eq("tenant_id", tenantId)
       .order("created_at", { ascending: true }),
-    supabase.from("calls").select("status, duration_seconds, started_at").eq("tenant_id", tenantId),
+    supabase
+      .from("calls")
+      .select("status, duration_seconds, started_at")
+      .eq("tenant_id", tenantId)
+      .eq("is_test", false),
     supabase
       .from("calls")
       .select("id, caller_number, status, duration_seconds, started_at, direction")
       .eq("tenant_id", tenantId)
+      .eq("is_test", false)
       .order("started_at", { ascending: false })
       .limit(8),
     supabase.from("integration_connections").select("provider, status").eq("tenant_id", tenantId),
