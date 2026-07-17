@@ -143,27 +143,45 @@ export async function reconcileActiveCalls(
     .not("ultravox_call_id", "is", null)
     .in("status", ["ringing", "initiated", "initiating", "in_progress"])
     .limit(200);
-  const incompleteQuery = supabase
+  // Recently-completed calls that might still be missing post-call data
+  // (recording, transcript, summary, or outcome) — we filter to the ones
+  // actually missing something below, so nothing is re-hit needlessly.
+  const completedQuery = supabase
     .from("calls")
     .select("id, tenant_id, ultravox_call_id, status, recording_url")
     .not("ultravox_call_id", "is", null)
     .eq("status", "completed")
-    .is("recording_url", null)
     .gte("started_at", sixHoursAgo)
     .limit(200);
 
   if (tenantId) {
     activeQuery.eq("tenant_id", tenantId);
-    incompleteQuery.eq("tenant_id", tenantId);
+    completedQuery.eq("tenant_id", tenantId);
   }
 
-  const [{ data: active }, { data: recentIncomplete }] = await Promise.all([
+  const [{ data: active }, { data: recentCompleted }] = await Promise.all([
     activeQuery,
-    incompleteQuery,
+    completedQuery,
   ]);
 
+  // Keep only completed calls actually missing summary OR outcome OR recording.
+  const completed = (recentCompleted ?? []).filter((c) => c.ultravox_call_id);
+  const completedIds = completed.map((c) => c.id);
+  let needsReconcile = completed;
+  if (completedIds.length > 0) {
+    const [{ data: sums }, { data: outs }] = await Promise.all([
+      supabase.from("call_summaries").select("call_id").in("call_id", completedIds),
+      supabase.from("call_outcomes").select("call_id").in("call_id", completedIds),
+    ]);
+    const haveSummary = new Set((sums ?? []).map((s) => s.call_id));
+    const haveOutcome = new Set((outs ?? []).map((o) => o.call_id));
+    needsReconcile = completed.filter(
+      (c) => !c.recording_url || !haveSummary.has(c.id) || !haveOutcome.has(c.id)
+    );
+  }
+
   const byId = new Map<string, ReconcilableCall>();
-  for (const row of [...(active ?? []), ...(recentIncomplete ?? [])]) {
+  for (const row of [...(active ?? []), ...needsReconcile]) {
     if (row.ultravox_call_id) {
       byId.set(row.id, row as ReconcilableCall);
     }
