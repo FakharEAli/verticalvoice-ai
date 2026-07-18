@@ -185,14 +185,20 @@ export async function reconcileActiveCalls(
   const completedIds = completed.map((c) => c.id);
   let needsReconcile = completed;
   if (completedIds.length > 0) {
-    const [{ data: sums }, { data: outs }] = await Promise.all([
+    const [{ data: sums }, { data: outs }, { data: evals }] = await Promise.all([
       supabase.from("call_summaries").select("call_id").in("call_id", completedIds),
       supabase.from("call_outcomes").select("call_id").in("call_id", completedIds),
+      supabase.from("call_evaluations").select("call_id").in("call_id", completedIds),
     ]);
     const haveSummary = new Set((sums ?? []).map((s) => s.call_id));
     const haveOutcome = new Set((outs ?? []).map((o) => o.call_id));
+    const haveEvaluation = new Set((evals ?? []).map((e) => e.call_id));
     needsReconcile = completed.filter(
-      (c) => !c.recording_url || !haveSummary.has(c.id) || !haveOutcome.has(c.id)
+      (c) =>
+        !c.recording_url ||
+        !haveSummary.has(c.id) ||
+        !haveOutcome.has(c.id) ||
+        !haveEvaluation.has(c.id)
     );
   }
 
