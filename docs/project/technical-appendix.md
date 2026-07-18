@@ -1,6 +1,6 @@
 # VerticalVoice AI — Technical Appendix
 
-For judges who want to go one level deeper than the pitch. Every number here
+For readers who want to go one level deeper than the summary. Every number here
 was pulled directly from the repository, not estimated.
 
 ## Database
@@ -14,7 +14,7 @@ was pulled directly from the repository, not estimated.
   `listings`/`showings`/`real_estate_leads` for real estate).
 - **RLS**: 30 `CREATE POLICY` statements enforce Row-Level Security across
   the schema. Tenant isolation is a database-layer guarantee, not an
-  application-layer convention — see `docs/competition/security-story.md`
+  application-layer convention — see `docs/project/security-story.md`
   for the detailed argument and the anon-key-vs-service-role-key split.
 - Supporting infrastructure tables worth noting: `idempotency_keys` and
   `job_attempts`/`jobs` (safe retry of async work like the call-normalizer),
@@ -81,7 +81,7 @@ was pulled directly from the repository, not estimated.
 
 ## RLS approach
 
-See `docs/competition/security-story.md` §1 for the full argument. In short:
+See `docs/project/security-story.md` §1 for the full argument. In short:
 every tenant-scoped table has RLS policies keyed on `tenant_id`; the
 browser-facing Supabase client uses the anon key (subject to RLS); the
 service-role key (bypasses RLS) is confined to server-side code paths that
@@ -101,13 +101,13 @@ need cross-tenant access before a tenant is resolved (e.g. webhook ingestion).
 
 ## Related documents
 
-- `docs/competition/architecture-diagram.md` — high-level system architecture
-- `docs/competition/data-flow-diagram.md` — end-to-end call sequence
-- `docs/competition/industry-pack-diagram.md` — `IndustryPack` interface + comparison table
-- `docs/competition/cost-comparison.md` — provider cost breakdown and budget modes
-- `docs/competition/security-story.md` — security model, file-by-file
-- `docs/competition/demo-script.md` — 6-scene open-house walkthrough
-- `docs/competition/judge-brief.md` — one-page executive summary
-- `docs/competition/roadmap.md` — what comes after the FYP
+- `docs/project/architecture-diagram.md` — high-level system architecture
+- `docs/project/data-flow-diagram.md` — end-to-end call sequence
+- `docs/project/industry-pack-diagram.md` — `IndustryPack` interface + comparison table
+- `docs/project/cost-comparison.md` — provider cost breakdown and budget modes
+- `docs/project/security-story.md` — security model, file-by-file
+- `docs/project/demo-walkthrough.md` — 6-scene demo walkthrough
+- `docs/project/executive-brief.md` — one-page executive summary
+- `docs/project/roadmap.md` — what comes after the FYP
 - `docs/architecture/INVENTORY.md` — full technology/file inventory
 - `docs/architecture/ADR-001-vertical-pack-architecture.md` — the architecture decision record this whole platform is built on

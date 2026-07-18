@@ -1,6 +1,6 @@
-# VerticalVoice AI — Open-House Demo Script
+# VerticalVoice AI — Demo Walkthrough
 
-A 6-scene walkthrough for a judge or reviewer standing at a laptop. Every
+A 6-scene walkthrough for a reviewer or panel member standing at a laptop. Every
 scene references the actual seeded demo tenants (`supabase/seed.sql`) and
 real dashboard routes in the app — nothing here requires setup beyond having
 the app running and seeded.
@@ -29,7 +29,7 @@ the top-line call volume / booking metrics.
 
 ## Scene 2 — Show the architecture, not just the demo (1 minute)
 
-Open `docs/competition/architecture-diagram.md` (renders as a Mermaid diagram
+Open `docs/project/architecture-diagram.md` (renders as a Mermaid diagram
 on GitHub) and walk through: caller → telephony provider → voice runtime →
 tool gateway → domain service → database → back to caller. Point out that
 the Shared Core (compiler, policy engine, tool gateway) sits underneath all
@@ -75,7 +75,7 @@ separate analytics UIs."*
 
 ## Scene 5 — Break it on purpose (safety demo, 1–2 minutes)
 
-This is the scene that separates a toy demo from a system a judge should
+This is the scene that separates a toy demo from a system a reviewer should
 trust. Go back to `/dashboard/test-center`'s Text Simulator and type in each
 of these adversarial/blocked scenarios, switching tenant per scenario:
 
@@ -115,6 +115,6 @@ Sunrise Medical, Bellas Italian, and Metro Realty are three tenants running
 on top of it — with a fourth vertical being a config file away, not a
 rewrite."*
 
-Close by pointing at `docs/competition/judge-brief.md` and
-`docs/competition/technical-appendix.md` for anyone who wants to go deeper
+Close by pointing at `docs/project/executive-brief.md` and
+`docs/project/technical-appendix.md` for anyone who wants to go deeper
 after the demo.

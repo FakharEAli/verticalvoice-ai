@@ -14,6 +14,30 @@ let it go stale.
   (Twilio/Telnyx), or any LLM/transcription provider in this repo or its
   docs. **Do not market this as HIPAA-compliant until BAAs are executed and
   a compliance review is complete.**
+- **No PCI DSS scope assessment for restaurant ordering.** The restaurant
+  vertical handles payment-adjacent order data and integrates with POS
+  providers (`src/integrations/pos/`). The platform is designed so that card
+  data is never spoken to, captured by, or stored in the agent — payment
+  capture is delegated to the POS/payment provider — but that boundary has
+  **not been formally assessed or attested against PCI DSS**. Do not enable
+  any flow that would have a caller read card details to the agent, and do
+  not claim PCI compliance until a scope assessment is complete.
+- **Fair Housing enforcement is tested, not legally reviewed.** The real
+  estate vertical enforces a `fair_housing` policy that refuses to steer on
+  protected characteristics, and this is exercised by the adversarial
+  scenarios in `src/tests/scenarios/real-estate.ts`. However, the policy
+  wording and refusal behaviour have **not been reviewed by counsel** against
+  the Fair Housing Act or state/local equivalents, and there is no
+  jurisdiction-by-jurisdiction mapping of protected classes (which vary
+  beyond the federal set). Treat the current rules as an engineering control
+  demonstrating the mechanism, not as a legal compliance sign-off.
+- **No call-recording consent matrix per vertical.** All three verticals
+  record and transcribe calls, but consent requirements differ by
+  jurisdiction (one-party vs. two-party states) and by the sensitivity of
+  the data involved — patient health details, payment-adjacent order data,
+  and housing-inquiry data each carry different exposure. See the
+  *Consent & telephony* section below; there is no per-vertical, per-region
+  consent configuration yet.
 - **No formal breach notification process.** `docs/runbooks/incident-response.md`
   covers technical containment steps but there is no legal/regulatory
   breach-notification playbook (timelines, required disclosures per

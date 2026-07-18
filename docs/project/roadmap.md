@@ -2,7 +2,7 @@
 
 An honest accounting of what this platform is today (a working, evaluated,
 mock-provider-capable architecture) versus what it needs before it could take
-real calls from real businesses. Nothing below is understated — a judge or
+real calls from real businesses. Nothing below is understated — a reviewer or
 future contributor should be able to use this as a punch list.
 
 ## 1. Real Twilio / Ultravox account activation

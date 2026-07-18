@@ -1,4 +1,8 @@
-# VerticalVoice AI — Judge Brief
+# VerticalVoice AI — Executive Brief
+
+A one-page summary of the project's problem statement, architecture, and
+current implementation status, intended as an entry point for the evaluation
+panel before the technical appendix.
 
 ## The problem
 
@@ -21,7 +25,7 @@ compliance policies, and dashboards. The compiler takes a tenant's config and
 a pack, and produces a hashed, deterministic `CompiledAgentConfig` that
 drives the live call.
 
-## The two USPs
+## The two distinguishing contributions
 
 - **5–10 minute setup.** A new tenant fills out the pack's onboarding schema
   (business info, hours, appointment types, menu, listings — whatever the
@@ -53,9 +57,10 @@ for the dashboard.
 | `VOICE_PROVIDER=mock` / `TELEPHONY_PROVIDER=mock` local dev mode | HIPAA BAA / formal PHI compliance review for real patient data |
 | RLS-enforced multi-tenant database (30 policies, ~90 tables) | Production Supabase project (currently local/dev) |
 
-## Closing line
+## Summary
 
-*"We did not build three voice demos. We built one vertical-agent operating
-system, and Sunrise Medical, Bellas Italian, and Metro Realty are three
-tenants running on top of it — with a fourth vertical being a config file
-away, not a rewrite."*
+The project's central claim is architectural rather than demonstrative: this
+is not three voice demos, but one vertical-agent operating system on which
+Sunrise Medical, Bellas Italian, and Metro Realty run as three tenants. The
+test of that claim is that adding a fourth vertical is a configuration and
+pack-authoring exercise, not a rewrite of the platform.

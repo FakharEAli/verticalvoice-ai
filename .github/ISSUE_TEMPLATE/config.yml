@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security vulnerability
+    url: https://github.com/alifakhar816/verticalvoice-ai/security/advisories/new
+    about: Please report security vulnerabilities privately — see SECURITY.md. Do not open a public issue.
+  - name: Questions & discussion
+    url: https://github.com/alifakhar816/verticalvoice-ai/discussions
+    about: For general questions or discussion that isn't a bug report or feature request.

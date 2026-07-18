@@ -91,7 +91,7 @@ before any data is trusted or written. An unsigned or forged webhook claiming
   (`logToolRun()` in `gateway.ts`), including tool name, duration, status,
   and error message where applicable.
 - The dashboard exposes this at `/dashboard/audit`, giving a tenant (and a
-  judge) a verifiable trail of what the agent actually did on a call, not
+  reviewer) a verifiable trail of what the agent actually did on a call, not
   just what the transcript claims.
 
 ## 8. Rate limiting
@@ -104,7 +104,7 @@ before any data is trusted or written. An unsigned or forged webhook claiming
   restaurant `get-menu` call. This is enforced as part of the tool
   configuration the gateway resolves before executing a tool (step 3/4).
 
-## Bottom line for judges
+## Bottom line
 
 None of the above is "the LLM promises to behave." Tenant isolation is a
 database constraint. Compliance is a deterministic function with unit-testable
