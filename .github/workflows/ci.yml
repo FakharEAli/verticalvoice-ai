@@ -52,5 +52,4 @@ jobs:
 
       - name: Run unit tests
         if: steps.check_tests.outputs.has_tests == 'true'
-        continue-on-error: true
         run: npx vitest run
