@@ -11,6 +11,7 @@ import type {
   AnalyticsDefinition,
   PromptFragment,
 } from "@/industries/core/industry-pack";
+import { VOICE_CONVERSATION_RULES } from "@/industries/core/voice-rules";
 
 // ─── Tenant Configuration ──────────────────────────────────────────────────
 
@@ -91,8 +92,36 @@ function interpolateTemplate(
   return result;
 }
 
-function buildTemplateVariables(tenant: TenantConfig): Record<string, string> {
-  return {
+/** Industry packs write {{restaurant_name}} / {{practice_name}} / etc. — all of
+ *  which mean "this business". Without these aliases the agent literally said
+ *  "Thank you for calling {{restaurant_name}}" out loud on live calls. */
+const BUSINESS_NAME_ALIASES = [
+  "business_name",
+  "businessName",
+  "restaurant_name",
+  "practice_name",
+  "clinic_name",
+  "agency_name",
+  "brokerage_name",
+  "company_name",
+] as const;
+
+const PHONE_ALIASES = ["business_phone", "phone", "contact_phone"] as const;
+
+/** Readable stand-ins for descriptor slots, so a missing answer never leaves
+ *  a hole like "a  restaurant" in a spoken sentence. */
+const DESCRIPTOR_FALLBACKS: Record<string, string> = {
+  cuisine_type: "neighborhood",
+  practice_type: "general",
+  specialty: "general",
+  property_type: "residential",
+};
+
+function buildTemplateVariables(
+  tenant: TenantConfig,
+  onboardingAnswers: Record<string, unknown> = {},
+): Record<string, string> {
+  const vars: Record<string, string> = {
     businessName: tenant.businessName,
     businessPhone: tenant.businessPhone,
     timezone: tenant.timezone,
@@ -100,6 +129,43 @@ function buildTemplateVariables(tenant: TenantConfig): Record<string, string> {
     tenantId: tenant.tenantId,
     industryId: tenant.industryId,
   };
+
+  // Anything the owner answered during onboarding is addressable by its key.
+  for (const [key, value] of Object.entries(onboardingAnswers)) {
+    if (value == null) continue;
+    if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") {
+      const str = String(value).trim();
+      if (str) vars[key] = str;
+    }
+  }
+
+  for (const alias of BUSINESS_NAME_ALIASES) {
+    if (!vars[alias]) vars[alias] = tenant.businessName;
+  }
+  for (const alias of PHONE_ALIASES) {
+    if (!vars[alias]) vars[alias] = tenant.businessPhone;
+  }
+  for (const [key, fallback] of Object.entries(DESCRIPTOR_FALLBACKS)) {
+    if (!vars[key]) vars[key] = fallback;
+  }
+
+  return vars;
+}
+
+/**
+ * Last line of defence: no `{{placeholder}}` may ever reach the caller's ear.
+ * Anything still unresolved is dropped and the surrounding punctuation and
+ * whitespace tidied, so the sentence still reads cleanly when spoken.
+ */
+function stripUnresolvedPlaceholders(text: string): string {
+  return text
+    .replace(/\{\{\s*[\w.]+\s*\}\}/g, "")
+    .replace(/\ba\s+,/g, "a,")
+    .replace(/[ \t]{2,}/g, " ")
+    .replace(/ +([,.!?;:])/g, "$1")
+    .replace(/,\s*,/g, ",")
+    .replace(/\(\s*\)/g, "")
+    .trim();
 }
 
 function evaluateFragmentCondition(
@@ -130,8 +196,9 @@ function evaluateFragmentCondition(
 function buildSystemPrompt(
   pack: IndustryPack,
   tenant: TenantConfig,
+  onboardingAnswers: Record<string, unknown> = {},
 ): string {
-  const vars = buildTemplateVariables(tenant);
+  const vars = buildTemplateVariables(tenant, onboardingAnswers);
   const fragments = pack.promptFragments;
 
   const activeFragments = fragments.fragments
@@ -151,12 +218,16 @@ function buildSystemPrompt(
 
   const parts: string[] = [
     interpolateTemplate(fragments.systemPreamble, vars),
+    // The speaking rules come immediately after "who you are" and before any
+    // industry instruction, because they govern HOW every later instruction
+    // is delivered out loud.
+    VOICE_CONVERSATION_RULES,
     interpolateTemplate(fragments.industryContext, vars),
     ...activeFragments.map((f) => interpolateTemplate(f.content, vars)),
     interpolateTemplate(fragments.closingInstructions, vars),
   ];
 
-  return parts.filter(Boolean).join("\n\n");
+  return stripUnresolvedPlaceholders(parts.filter(Boolean).join("\n\n"));
 }
 
 function mergeVoiceConfig(
@@ -217,16 +288,15 @@ function filterPoliciesByIntents(
 function resolveGreeting(
   pack: IndustryPack,
   tenant: TenantConfig,
+  onboardingAnswers: Record<string, unknown> = {},
 ): string {
+  const vars = buildTemplateVariables(tenant, onboardingAnswers);
   if (tenant.overrides.greeting) {
-    return interpolateTemplate(
-      tenant.overrides.greeting,
-      buildTemplateVariables(tenant),
-    );
+    return stripUnresolvedPlaceholders(interpolateTemplate(tenant.overrides.greeting, vars));
   }
   const defaultTemplate = pack.defaults.greetingTemplates[0];
   if (!defaultTemplate) return `Thank you for calling ${tenant.businessName}.`;
-  return interpolateTemplate(defaultTemplate.template, buildTemplateVariables(tenant));
+  return stripUnresolvedPlaceholders(interpolateTemplate(defaultTemplate.template, vars));
 }
 
 // ─── Compiler ─────────────────────────────────────────────────────────────
@@ -246,7 +316,7 @@ export function compileAgent(
   const inputHash = deterministicHash(inputPayload);
 
   // 2. Build system prompt
-  const systemPrompt = buildSystemPrompt(pack, tenantConfig);
+  const systemPrompt = buildSystemPrompt(pack, tenantConfig, onboardingAnswers);
 
   // 3. Merge voice/call config
   const voice = mergeVoiceConfig(pack.defaults.voice, tenantConfig.overrides.voice);
@@ -266,7 +336,7 @@ export function compileAgent(
   const activePolicies = filterPoliciesByIntents(pack.policyPack, activeIntents);
 
   // 7. Resolve greeting
-  const greeting = resolveGreeting(pack, tenantConfig);
+  const greeting = resolveGreeting(pack, tenantConfig, onboardingAnswers);
 
   // 8. Deterministic compiledAt from input hash
   const hashNum = parseInt(inputHash, 16);
