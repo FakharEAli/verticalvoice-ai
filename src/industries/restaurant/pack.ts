@@ -1598,6 +1598,12 @@ export const restaurantPack: IndustryPack = {
           required: true,
           description: "Customer phone number for order updates.",
         },
+        {
+          name: "customer_name",
+          type: "string",
+          required: true,
+          description: "Name the order is under — always ask for it before submitting.",
+        },
       ],
       returnType: "{ order_id: string; estimated_time_minutes: number; total: number; status: string }",
       requiresAuth: true,

@@ -92,7 +92,11 @@ function fields(entries: (readonly [string, string | null | undefined])[]): Deta
   return entries
     .filter((e): e is readonly [string, string] => {
       const v = e[1];
-      return typeof v === "string" && v.trim() !== "" && v !== "—" && v !== "Unknown";
+      if (typeof v !== "string" || v.trim() === "") return false;
+      // Placeholder values the pipeline uses when a field wasn't captured —
+      // showing "Customer: unknown" is worse than showing nothing.
+      const placeholder = ["—", "unknown", "n/a", "na", "null", "undefined"];
+      return !placeholder.includes(v.trim().toLowerCase());
     })
     .map(([label, value]) => ({ label, value }));
 }

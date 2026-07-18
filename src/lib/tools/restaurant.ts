@@ -455,6 +455,10 @@ const handleSubmitOrder: ToolHandler = async ({ supabase, tenantId, callId, inpu
   const orderType = typeof input.order_type === "string" ? input.order_type : "";
   const customerPhone =
     typeof input.customer_phone === "string" ? input.customer_phone.trim() : "";
+  const customerName =
+    typeof input.customer_name === "string" && input.customer_name.trim()
+      ? input.customer_name.trim()
+      : "Phone order";
   let specialInstructions =
     typeof input.special_instructions === "string" ? input.special_instructions : null;
   const deliveryAddress =
@@ -510,7 +514,7 @@ const handleSubmitOrder: ToolHandler = async ({ supabase, tenantId, callId, inpu
       order_number: orderNumber,
       order_type: orderType,
       status: "pending",
-      customer_name: "unknown",
+      customer_name: customerName,
       customer_phone: customerPhone,
       subtotal_cents: subtotalCents,
       tax_cents: 0,
