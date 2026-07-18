@@ -74,6 +74,21 @@ function countItems(value: unknown): number | null {
   return null;
 }
 
+/**
+ * Total units ordered, not the number of line items — an order of
+ * "5 × pepperoni pizza" is 5 items to a human, not 1.
+ */
+function totalQuantity(value: unknown): number | null {
+  if (!Array.isArray(value)) return null;
+  return value.reduce<number>((sum, entry) => {
+    if (entry && typeof entry === "object") {
+      const q = (entry as Record<string, unknown>).quantity;
+      return sum + (typeof q === "number" && Number.isFinite(q) && q > 0 ? q : 1);
+    }
+    return sum + 1;
+  }, 0);
+}
+
 /** Fallback: readable-but-generic rendering when a tool has no bespoke phrasing. */
 function genericDescription(toolName: string, input: Bag, output: Bag): ToolRunDescription {
   const detail = joinDetail(
@@ -167,7 +182,7 @@ export function describeToolRun(
       };
       break;
     case "submit_order": {
-      const items = countItems(input.items);
+      const items = totalQuantity(input.items);
       const total = num(output, "total");
       d = {
         action: "Placed an order",
