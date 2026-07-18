@@ -71,5 +71,11 @@ export function buildSelectedTools(pack: IndustryPack, opts: BuildSelectedToolsO
     is_test: opts.isTest ?? false,
   });
 
-  return pack.tools.map((binding) => toUltravoxTool(binding, baseUrl, token));
+  return [
+    ...pack.tools.map((binding) => toUltravoxTool(binding, baseUrl, token)),
+    // Ultravox's built-in hang-up tool. Without this the agent has no way to
+    // end a call no matter what the prompt says, so the caller was always the
+    // one forced to hang up.
+    { toolName: "hangUp" },
+  ];
 }
