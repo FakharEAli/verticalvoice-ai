@@ -21,6 +21,7 @@ import {
   Home,
   Eye,
   Wrench,
+  BadgeDollarSign,
 } from "lucide-react";
 import { createServerClient } from "@/lib/database/supabase-server";
 import { getCurrentTenantId } from "@/domain/tenants/current";
@@ -54,7 +55,7 @@ async function getTestCallIds(
 type BadgeVariant = "success" | "warning" | "destructive" | "outline";
 
 const STATUS_SUCCESS = ["confirmed", "verified", "approved", "active", "ready", "delivered", "resolved", "completed"];
-const STATUS_WARNING = ["pending", "waiting", "waitlisted", "in_progress", "scheduled", "preparing", "open", "new"];
+const STATUS_WARNING = ["pending", "waiting", "waitlisted", "in_progress", "scheduled", "preparing", "open", "new", "requested"];
 const STATUS_DESTRUCTIVE = ["cancelled", "denied", "failed", "no_show"];
 
 function statusBadge(status: string | null | undefined) {
@@ -652,7 +653,14 @@ async function RealEstatePanel({ supabase, tenantId }: { supabase: Awaited<Retur
   windowStart.setHours(windowStart.getHours() - 12);
   const sinceIso = windowStart.toISOString();
 
-  const [testCallIds, { data: leadRows }, { data: showingRows }, { data: listings }, { data: maintenanceRows }] =
+  const [
+    testCallIds,
+    { data: leadRows },
+    { data: showingRows },
+    { data: listings },
+    { data: maintenanceRows },
+    { data: valuationRows },
+  ] =
     await Promise.all([
       getTestCallIds(supabase, tenantId),
       supabase
@@ -667,6 +675,10 @@ async function RealEstatePanel({ supabase, tenantId }: { supabase: Awaited<Retur
         .from("showings")
         .select("id, call_id, scheduled_at, duration_minutes, status, feedback, interest_level, listing_id, agent_id, created_at")
         .eq("tenant_id", tenantId)
+        // A cancelled showing is not upcoming. The parallel healthcare
+        // appointments query has always filtered these out; this one didn't,
+        // so cancelled viewings kept sitting in "Upcoming Showings".
+        .neq("status", "cancelled")
         .gte("scheduled_at", sinceIso)
         .order("scheduled_at", { ascending: true })
         .limit(20),
@@ -683,6 +695,20 @@ async function RealEstatePanel({ supabase, tenantId }: { supabase: Awaited<Retur
         .neq("status", "completed")
         .order("created_at", { ascending: false })
         .limit(20),
+      // Valuation/CMA requests the agent takes on calls. Until now nothing in
+      // this dashboard read this table, so every seller lead the agent
+      // captured was invisible to staff and the business simply never learned
+      // about it. Ordered by capture time, not scheduled_at — a fresh request
+      // has no agreed time yet.
+      supabase
+        .from("valuation_appointments")
+        .select(
+          "id, call_id, owner_name, owner_phone, owner_email, property_address, property_type, scheduled_at, status, estimated_value_cents, notes, created_at"
+        )
+        .eq("tenant_id", tenantId)
+        .neq("status", "cancelled")
+        .order("created_at", { ascending: false })
+        .limit(20),
     ]);
 
   // Embedded foreign-table selects (showings->listings/re_agents,
@@ -692,6 +718,7 @@ async function RealEstatePanel({ supabase, tenantId }: { supabase: Awaited<Retur
   const leads = (leadRows ?? []).slice(0, 10);
   const showings = (showingRows ?? []).slice(0, 10);
   const maintenance = (maintenanceRows ?? []).slice(0, 10);
+  const valuations = (valuationRows ?? []).slice(0, 10);
 
   const listingIds = [...new Set(showings.map((s) => s.listing_id).filter(Boolean))];
   const agentIds = [...new Set(showings.map((s) => s.agent_id).filter((id): id is string => !!id))];
@@ -826,6 +853,62 @@ async function RealEstatePanel({ supabase, tenantId }: { supabase: Awaited<Retur
                 </div>
               );
             })
+          )}
+        </CardContent>
+      </Card>
+
+      <Card className={`border-t-2 ${t.border}`}>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <BadgeDollarSign className={`size-5 ${t.icon}`} />
+            Valuation Requests
+          </CardTitle>
+          <CardDescription>Owners asking what their property is worth — call them back to agree a time</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {!valuations.length ? (
+            <EmptyRow label="No valuation requests yet — calls asking for a home valuation will show up here." />
+          ) : (
+            valuations.map((v) => (
+              <div key={v.id} className="flex items-start justify-between gap-3 rounded-lg border p-3">
+                <OperationsItem
+                  callId={v.call_id}
+                  isTest={!!v.call_id && testCallIds.has(v.call_id)}
+                  triggerContent={
+                    <>
+                      <span className="font-medium">{v.property_address}</span>
+                      <span className="block text-xs text-muted-foreground">
+                        {v.owner_name} · {formatDateTime(v.created_at)}
+                      </span>
+                    </>
+                  }
+                  title={v.property_address}
+                  subtitle={`Valuation request · ${formatDateTime(v.created_at)}`}
+                  fields={fields([
+                    ["Property", v.property_address],
+                    ["Property type", v.property_type ? humanize(v.property_type) : null],
+                    ["Owner", v.owner_name],
+                    ["Phone", formatPhoneNumber(v.owner_phone)],
+                    ["Email", v.owner_email],
+                    // Deliberately reads as "not yet booked" rather than
+                    // showing a blank date: the request is real, the
+                    // appointment isn't one until a human agrees it.
+                    [
+                      "Visit scheduled",
+                      v.scheduled_at ? formatDateTime(v.scheduled_at) : "Not booked yet — needs a callback",
+                    ],
+                    [
+                      "Estimated value",
+                      v.estimated_value_cents != null ? formatMoneyFromCents(v.estimated_value_cents) : null,
+                    ],
+                    ["Status", humanize(v.status)],
+                    ["Notes", v.notes],
+                    ["Requested", formatDateTime(v.created_at)],
+                  ])}
+                />
+                {statusBadge(v.status)}
+              </div>
+            ))
           )}
         </CardContent>
       </Card>

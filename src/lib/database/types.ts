@@ -3457,7 +3457,7 @@ export interface Database {
           owner_email: string | null;
           property_address: string;
           property_type: string | null;
-          scheduled_at: string;
+          scheduled_at: string | null;
           status: string;
           estimated_value_cents: number | null;
           notes: string | null;
@@ -3474,7 +3474,7 @@ export interface Database {
           owner_email?: string | null;
           property_address: string;
           property_type?: string | null;
-          scheduled_at: string;
+          scheduled_at?: string | null;
           status?: string;
           estimated_value_cents?: number | null;
           notes?: string | null;
@@ -3491,7 +3491,7 @@ export interface Database {
           owner_email?: string | null;
           property_address?: string;
           property_type?: string | null;
-          scheduled_at?: string;
+          scheduled_at?: string | null;
           status?: string;
           estimated_value_cents?: number | null;
           notes?: string | null;

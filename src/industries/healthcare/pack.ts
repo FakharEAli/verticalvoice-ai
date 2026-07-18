@@ -1498,10 +1498,18 @@ export const healthcarePack: IndustryPack = {
       intentIds: ["book_appointment"],
       parameters: [
         {
-          name: "patient_id",
+          name: "patient_name",
           type: "string",
           required: true,
-          description: "Unique patient identifier.",
+          description:
+            "Full name of the patient the appointment is for, exactly as the caller says it. Ask for it — there is no patient ID a caller could know.",
+        },
+        {
+          name: "date_of_birth",
+          type: "string",
+          required: true,
+          description:
+            "Patient's date of birth as YYYY-MM-DD. Ask for it before booking; it is what identifies this patient on later calls.",
         },
         {
           name: "slot_id",
@@ -1574,6 +1582,53 @@ export const healthcarePack: IndustryPack = {
       retryConfig: { maxRetries: 1, backoffMs: 1000 },
     },
     {
+      id: "reschedule_appointment",
+      name: "Reschedule Appointment",
+      description:
+        "Move an existing appointment to a new date and time. Check availability first, then reschedule to a slot that came back free.",
+      intentIds: ["reschedule"],
+      parameters: [
+        {
+          name: "new_datetime",
+          type: "string",
+          required: true,
+          description:
+            "The new appointment date and time (ISO 8601). Use a slot returned by check_availability, not a time the caller guessed at.",
+        },
+        {
+          name: "appointment_id",
+          type: "string",
+          required: false,
+          description: "ID of the appointment to move, if it is already known.",
+        },
+        {
+          name: "patient_name",
+          type: "string",
+          required: false,
+          description:
+            "Full name of the patient, used to find the appointment when no appointment ID is known (callers almost never have one).",
+        },
+        {
+          name: "patient_phone",
+          type: "string",
+          required: false,
+          description:
+            "Patient's phone number, the most reliable way to find the appointment when no appointment ID is known.",
+        },
+        {
+          name: "reason",
+          type: "string",
+          required: false,
+          description: "Brief reason the caller gave for moving the appointment.",
+        },
+      ],
+      returnType: "RescheduleResult",
+      requiresAuth: true,
+      rateLimit: { maxCalls: 5, windowSeconds: 60 },
+      timeout: 15000,
+      retryConfig: { maxRetries: 1, backoffMs: 2000 },
+    },
+    {
       id: "get_patient_info",
       name: "Get Patient Information",
       description:
@@ -1591,13 +1646,15 @@ export const healthcarePack: IndustryPack = {
           name: "patient_name",
           type: "string",
           required: true,
-          description: "Full name of the patient.",
+          description:
+            "Full name of the patient, exactly as it would appear on their record. Partial or first-name-only values will not match.",
         },
         {
           name: "date_of_birth",
           type: "string",
           required: true,
-          description: "Date of birth for verification (ISO 8601).",
+          description:
+            "Patient's date of birth as YYYY-MM-DD. This is the identity check — always ask for it, and never read back any appointment details until it matches.",
         },
       ],
       returnType: "PatientRecord",
@@ -1614,10 +1671,11 @@ export const healthcarePack: IndustryPack = {
       intentIds: ["refill_request"],
       parameters: [
         {
-          name: "patient_id",
+          name: "patient_name",
           type: "string",
           required: true,
-          description: "Unique patient identifier.",
+          description:
+            "Full name of the patient the prescription is for, exactly as the caller says it. Ask for it — there is no patient ID a caller could know.",
         },
         {
           name: "medication_name",
@@ -1626,10 +1684,11 @@ export const healthcarePack: IndustryPack = {
           description: "Name of the medication to refill.",
         },
         {
-          name: "pharmacy_id",
+          name: "pharmacy_name",
           type: "string",
           required: false,
-          description: "ID of the target pharmacy.",
+          description:
+            "Name of the pharmacy the refill should be sent to, as the caller says it (for example \"Walgreens on Oak Street\"). Ask which pharmacy they use.",
         },
         {
           name: "patient_phone",

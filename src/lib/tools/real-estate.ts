@@ -113,17 +113,6 @@ async function findListingByAddress(
   return byFullAddress ?? null;
 }
 
-function addBusinessDays(from: Date, days: number): Date {
-  const result = new Date(from);
-  let remaining = days;
-  while (remaining > 0) {
-    result.setUTCDate(result.getUTCDate() + 1);
-    const day = result.getUTCDay();
-    if (day !== 0 && day !== 6) remaining -= 1;
-  }
-  return result;
-}
-
 const SHOWING_WINDOW_START_HOUR = 10;
 const SHOWING_WINDOW_END_HOUR = 18;
 const SHOWING_SLOT_MINUTES = 30;
@@ -382,9 +371,6 @@ const handleSubmitValuationRequest: ToolHandler = async ({ supabase, tenantId, c
     return { submitted: false, reason: "Missing property address or owner name" };
   }
 
-  const placeholderSlot = addBusinessDays(new Date(), 3);
-  placeholderSlot.setUTCHours(10, 0, 0, 0);
-
   const noteParts: string[] = [];
   if (purpose) noteParts.push(`Purpose: ${purpose}`);
   if (urgency) noteParts.push(`Urgency: ${urgency}`);
@@ -399,8 +385,14 @@ const handleSubmitValuationRequest: ToolHandler = async ({ supabase, tenantId, c
       owner_phone: ownerPhone ?? "unknown",
       property_address: propertyAddress,
       property_type: propertyType ?? null,
-      scheduled_at: placeholderSlot.toISOString(),
-      status: "scheduled",
+      // A caller asking "what's my house worth?" has agreed to nothing. The
+      // old code invented a slot three business days out at 10:00 and filed it
+      // as `scheduled`, which showed staff a booking that existed nowhere but
+      // in this row — and that no one had told the owner about. Record what
+      // actually happened: a request awaiting a human to call back and agree a
+      // real time.
+      scheduled_at: null,
+      status: "requested",
       notes,
     })
     .select("id")

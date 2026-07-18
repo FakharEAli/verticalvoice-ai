@@ -58,15 +58,23 @@ const HANDLER_INPUT_READS: Record<string, Record<string, string[]>> = {
   healthcare: {
     check_availability: ["provider_id", "appointment_type", "date_from", "date_to"],
     book_appointment_slot: [
-      "patient_id",
+      "patient_name",
+      "date_of_birth",
       "slot_id",
       "appointment_type",
       "reason_for_visit",
       "patient_phone",
     ],
     cancel_appointment: ["appointment_id", "reason", "patient_name", "patient_phone"],
+    reschedule_appointment: [
+      "new_datetime",
+      "appointment_id",
+      "patient_name",
+      "patient_phone",
+      "reason",
+    ],
     get_patient_info: ["patient_name", "date_of_birth"],
-    submit_refill_request: ["patient_id", "medication_name", "pharmacy_id", "patient_phone"],
+    submit_refill_request: ["patient_name", "medication_name", "pharmacy_name", "patient_phone"],
     verify_insurance: [
       "insurance_carrier",
       "member_id",

@@ -14,6 +14,7 @@ const POSITIVE_OUTCOME_KEYS = [
   "submitted",
   "created",
   "cancelled",
+  "rescheduled",
   "updated",
   "sent",
 ];

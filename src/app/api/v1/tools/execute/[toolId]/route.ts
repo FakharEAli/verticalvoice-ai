@@ -4,7 +4,24 @@ import { verifyToolToken } from "@/lib/telephony/tool-token";
 import { getToolHandler } from "@/lib/tools/registry";
 import { notifyStaff } from "@/lib/notifications/dispatch";
 import { isPositiveToolOutcome } from "@/lib/calls/summarize";
+import { logger } from "@/lib/observability/logger";
 import type { Json } from "@/lib/database/types";
+
+/**
+ * What the AI agent is told when a handler throws.
+ *
+ * Whatever this route returns is handed straight to the model by Ultravox and
+ * can be read aloud to the caller, so the raw error must never reach it: a
+ * Postgres message like `duplicate key value violates unique constraint
+ * "appointments_pkey"` is a customer-hostile thing to say on a phone call, and
+ * leaks schema internals besides. The real error still goes to the server log
+ * and to `call_tool_runs.error_message`, so staff lose nothing.
+ *
+ * Phrased as an instruction rather than an opaque code so the agent recovers
+ * gracefully instead of improvising a technical explanation.
+ */
+export const CALLER_SAFE_TOOL_ERROR =
+  "That action could not be completed right now. Apologize briefly to the caller, do not mention any technical details, and offer to take their name and number so a staff member can follow up.";
 
 function describeOutcome(toolId: string, output: Record<string, unknown>): string {
   const idField = Object.entries(output).find(([k, v]) => k.endsWith("_id") && typeof v === "string");
@@ -79,6 +96,16 @@ export async function POST(
   } catch (error) {
     const message = error instanceof Error ? error.message : "Tool execution failed";
 
+    logger.error("tool-execute: handler threw", {
+      toolId,
+      tenantId: auth.tenant_id,
+      callId: auth.call_id,
+      industry: auth.industry,
+      isTest: auth.is_test,
+      error: message,
+      stack: error instanceof Error ? error.stack : undefined,
+    });
+
     await supabase.from("call_tool_runs").insert({
       call_id: auth.call_id,
       tool_name: toolId,
@@ -90,6 +117,8 @@ export async function POST(
       completed_at: new Date().toISOString(),
     });
 
-    return NextResponse.json({ error: message }, { status: 500 });
+    // Status stays 500 so Ultravox's own retry/timeout semantics are unchanged;
+    // only the body the model sees is sanitized.
+    return NextResponse.json({ error: CALLER_SAFE_TOOL_ERROR }, { status: 500 });
   }
 }
