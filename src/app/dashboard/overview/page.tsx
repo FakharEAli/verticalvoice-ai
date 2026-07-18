@@ -20,6 +20,7 @@ import { getCurrentTenantId } from "@/domain/tenants/current";
 import { getAgentConfig } from "@/domain/agents/service";
 import { LiveCallOrb } from "@/components/shared/live-call-orb";
 import { TestBadge } from "@/components/shared/test-badge";
+import { displayCallerName } from "@/lib/calls/display";
 import type { Json } from "@/lib/database/types";
 import { OverviewStats } from "./overview-stats";
 
@@ -321,8 +322,8 @@ export default async function OverviewPage() {
                         {formatCallTime(call.started_at, tenantTimezone)}
                       </span>
                       <div className="min-w-0">
-                        <p className="flex items-center gap-1.5 truncate font-mono text-sm font-medium tabular-nums">
-                          {call.caller_number ?? "Unknown number"}
+                        <p className="flex items-center gap-1.5 truncate text-sm font-medium">
+                          {displayCallerName(call.caller_number)}
                           {call.is_test && <TestBadge />}
                         </p>
                         <p className="text-xs capitalize text-muted-foreground">

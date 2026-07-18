@@ -24,6 +24,8 @@ import { createServerClient } from "@/lib/database/supabase-server";
 import { getCurrentTenantId } from "@/domain/tenants/current";
 import { getCall } from "@/domain/calls/service";
 import { TestBadge } from "@/components/shared/test-badge";
+import { displayCallerName } from "@/lib/calls/display";
+import { describeToolRun } from "@/lib/calls/tool-descriptions";
 import { RecordingPlayer } from "./recording-player";
 
 function NoTenantState() {
@@ -119,6 +121,26 @@ function asDimensionScores(criteria: unknown): DimensionScore[] {
     const record = item as Record<string, unknown>;
     return typeof record.dimension === "string" && typeof record.score === "number";
   });
+}
+
+/**
+ * Timeline events carry a small JSONB payload. Render it as a readable
+ * phrase instead of dumping the raw object at the user.
+ */
+function describeEventData(data: unknown): string | null {
+  if (!data || typeof data !== "object") return null;
+  const entries = Object.entries(data as Record<string, unknown>).filter(
+    ([, v]) => v != null && v !== "" && (typeof v === "string" || typeof v === "number" || typeof v === "boolean")
+  );
+  if (entries.length === 0) return null;
+  return entries
+    .slice(0, 3)
+    .map(([k, v]) => {
+      const label = k.replace(/[_-]+/g, " ");
+      const pretty = label.charAt(0).toUpperCase() + label.slice(1);
+      return `${pretty}: ${String(v)}`;
+    })
+    .join(" · ");
 }
 
 interface TranscriptLine {
@@ -252,7 +274,7 @@ export default async function CallDetailPage({
   const tenantTimezone = businessProfile?.timezone || "UTC";
 
   const caller = participants?.find((p) => p.role !== "agent") ?? null;
-  const callerLabel = caller?.display_name || call.caller_number || "Unknown Caller";
+  const callerLabel = caller?.display_name || displayCallerName(call.caller_number);
 
   const dateTime = new Date(call.started_at).toLocaleString(undefined, {
     timeZone: tenantTimezone,
@@ -393,9 +415,9 @@ export default async function CallDetailPage({
                               {entry.event_type.replace(/_/g, " ")}
                             </span>
                           </div>
-                          {entry.data != null && (
-                            <p className="truncate font-mono text-xs text-muted-foreground">
-                              {JSON.stringify(entry.data)}
+                          {describeEventData(entry.data) && (
+                            <p className="text-xs text-muted-foreground">
+                              {describeEventData(entry.data)}
                             </p>
                           )}
                         </div>
@@ -420,31 +442,36 @@ export default async function CallDetailPage({
                 </p>
               ) : (
                 <div className="space-y-4">
-                  {toolRuns.map((tool, i) => (
-                    <div key={i}>
-                      <div className="flex items-start gap-3">
-                        <Wrench className="mt-0.5 size-4 text-muted-foreground" />
-                        <div className="min-w-0 flex-1">
-                          <p className="font-mono text-sm font-medium">{tool.tool_name}</p>
-                          {tool.input != null && (
-                            <p className="truncate font-mono text-xs text-muted-foreground">
-                              Input: {JSON.stringify(tool.input)}
+                  {toolRuns.map((tool, i) => {
+                    const described = describeToolRun(
+                      tool.tool_name,
+                      tool.input,
+                      tool.output,
+                      tool.status
+                    );
+                    const isFailure = tool.status === "failed" || tool.status === "error";
+                    return (
+                      <div key={i}>
+                        <div className="flex items-start gap-3">
+                          <Wrench className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-medium">{described.action}</p>
+                            <p className="text-xs text-muted-foreground">{described.detail}</p>
+                            <p
+                              className={`mt-0.5 text-xs font-medium ${
+                                isFailure ? "text-destructive" : "text-success"
+                              }`}
+                            >
+                              {isFailure && tool.error_message
+                                ? `Failed — ${tool.error_message}`
+                                : described.result}
                             </p>
-                          )}
-                          {tool.status === "failed" && tool.error_message ? (
-                            <p className="truncate font-mono text-xs text-destructive">
-                              Error: {tool.error_message}
-                            </p>
-                          ) : tool.output != null ? (
-                            <p className="truncate font-mono text-xs text-muted-foreground">
-                              Result: {JSON.stringify(tool.output)}
-                            </p>
-                          ) : null}
+                          </div>
                         </div>
+                        {i < toolRuns.length - 1 && <Separator className="mt-4" />}
                       </div>
-                      {i < toolRuns.length - 1 && <Separator className="mt-4" />}
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </CardContent>
@@ -510,7 +537,7 @@ export default async function CallDetailPage({
                     Phone
                   </dt>
                   <dd className="font-mono font-medium tabular-nums">
-                    {call.caller_number ?? "Unknown"}
+                    {displayCallerName(call.caller_number)}
                   </dd>
                 </div>
                 <Separator />

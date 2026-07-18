@@ -70,6 +70,28 @@ function formatShortDate(iso: string): string {
   return new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric" });
 }
 
+/**
+ * Audit metadata is a free-form JSONB bag. Render it as readable
+ * "Label: value" lines rather than dumping raw JSON at the user.
+ */
+function describeMetadata(metadata: unknown): { label: string; value: string }[] {
+  if (!metadata || typeof metadata !== "object") return [];
+  return Object.entries(metadata as Record<string, unknown>)
+    .filter(([, v]) => v != null && v !== "")
+    .slice(0, 8)
+    .map(([key, value]) => {
+      const spaced = key.replace(/[_-]+/g, " ");
+      const label = spaced.charAt(0).toUpperCase() + spaced.slice(1);
+      const rendered =
+        typeof value === "string" || typeof value === "number" || typeof value === "boolean"
+          ? String(value)
+          : Array.isArray(value)
+            ? `${value.length} item${value.length === 1 ? "" : "s"}`
+            : "(details)";
+      return { label, value: rendered };
+    });
+}
+
 export default function AuditPage() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -294,14 +316,14 @@ export default function AuditPage() {
                                     {formatFullTimestamp(event.createdAt)}
                                   </span>
                                 </div>
-                                {event.metadata != null && (
-                                  <div className="flex gap-2">
-                                    <span className="font-medium text-muted-foreground">Details:</span>
-                                    <code className="whitespace-pre-wrap font-mono text-xs">
-                                      {JSON.stringify(event.metadata, null, 2)}
-                                    </code>
+                                {describeMetadata(event.metadata).map((line) => (
+                                  <div key={line.label} className="flex gap-2">
+                                    <span className="font-medium text-muted-foreground">
+                                      {line.label}:
+                                    </span>
+                                    <span className="break-all">{line.value}</span>
                                   </div>
-                                )}
+                                ))}
                               </div>
                             </td>
                           </tr>

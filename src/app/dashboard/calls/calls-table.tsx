@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { TestBadge } from "@/components/shared/test-badge";
+import { displayCallerName } from "@/lib/calls/display";
 import { cn } from "@/lib/utils";
 import {
   Eye,
@@ -140,6 +141,7 @@ export function CallsTable({ calls, total, page, totalPages, direction, timezone
     return source.filter((call) => {
       if (query) {
         const matches =
+          displayCallerName(call.callerNumber).toLowerCase().includes(query) ||
           (call.callerNumber ?? "").toLowerCase().includes(query) ||
           statusLabel(call.status).toLowerCase().includes(query);
         if (!matches) return false;
@@ -337,8 +339,8 @@ export function CallsTable({ calls, total, page, totalPages, direction, timezone
                         </td>
                         <td className="whitespace-nowrap px-4 py-3">
                           <div className="flex items-center gap-2">
-                            <span className="font-mono text-sm font-medium tabular-nums">
-                              {call.callerNumber ?? "Unknown"}
+                            <span className="text-sm font-medium">
+                              {displayCallerName(call.callerNumber)}
                             </span>
                             {call.isTest && <TestBadge />}
                           </div>

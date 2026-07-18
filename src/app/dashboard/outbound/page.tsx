@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { PhoneOutgoing, Loader2, AlertTriangle, Building2, ListChecks, Radio } from "lucide-react";
 import {
@@ -54,11 +54,13 @@ const categoryLabel: Record<string, string> = {
 
 export default function OutboundCallsPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<OutboundTypesResponse | null>(null);
   const [togglingOutbound, setTogglingOutbound] = useState(false);
   const [selectedTypeId, setSelectedTypeId] = useState<string | null>(null);
-  const [toNumber, setToNumber] = useState("");
+  // Seeded from ?to= so "Call with agent" on a contact lands here prefilled.
+  const [toNumber, setToNumber] = useState(searchParams.get("to") ?? "");
   const [variables, setVariables] = useState<Record<string, string>>({});
   const [placingCall, setPlacingCall] = useState(false);
 

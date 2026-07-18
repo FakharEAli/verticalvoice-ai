@@ -275,6 +275,68 @@ export interface Database {
         };
         Relationships: [];
       };
+      contacts: {
+        Row: {
+          id: string;
+          tenant_id: string;
+          name: string | null;
+          phone: string;
+          email: string | null;
+          company: string | null;
+          notes: string | null;
+          tags: string[] | null;
+          source: string;
+          first_contacted_at: string | null;
+          last_contacted_at: string | null;
+          call_count: number;
+          do_not_call: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          tenant_id: string;
+          name?: string | null;
+          phone: string;
+          email?: string | null;
+          company?: string | null;
+          notes?: string | null;
+          tags?: string[] | null;
+          source?: string;
+          first_contacted_at?: string | null;
+          last_contacted_at?: string | null;
+          call_count?: number;
+          do_not_call?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          tenant_id?: string;
+          name?: string | null;
+          phone?: string;
+          email?: string | null;
+          company?: string | null;
+          notes?: string | null;
+          tags?: string[] | null;
+          source?: string;
+          first_contacted_at?: string | null;
+          last_contacted_at?: string | null;
+          call_count?: number;
+          do_not_call?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "contacts_tenant_id_fkey";
+            columns: ["tenant_id"];
+            isOneToOne: false;
+            referencedRelation: "tenants";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       calls: {
         Row: {
           id: string;

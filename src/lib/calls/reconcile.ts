@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database, Json } from "@/lib/database/types";
 import { summarizeCall } from "./summarize";
+import { captureContactFromCall } from "@/lib/contacts/capture";
 
 const UV_BASE = process.env.ULTRAVOX_BASE_URL ?? "https://api.ultravox.ai/api";
 
@@ -25,6 +26,9 @@ interface ReconcilableCall {
   ultravox_call_id: string;
   status: string;
   recording_url: string | null;
+  direction?: string | null;
+  caller_number?: string | null;
+  called_number?: string | null;
 }
 
 function uvGet(path: string): Promise<Response> {
@@ -123,6 +127,18 @@ export async function reconcileCall(
     uv.summary ?? uv.shortSummary ?? undefined
   );
 
+  // Add the other party to the tenant's contact book. Inbound = whoever rang
+  // us; outbound = whoever we rang. Browser/soft-client identities are dropped
+  // inside the helper, and it never throws.
+  const otherParty = call.direction === "outbound" ? call.called_number : call.caller_number;
+  await captureContactFromCall(supabase, {
+    tenantId: call.tenant_id,
+    phone: otherParty,
+    direction: call.direction ?? "inbound",
+    callId: call.id,
+    occurredAt: uv.ended ?? undefined,
+  });
+
   return { updated: true };
 }
 
@@ -139,7 +155,7 @@ export async function reconcileActiveCalls(
 
   const activeQuery = supabase
     .from("calls")
-    .select("id, tenant_id, ultravox_call_id, status, recording_url")
+    .select("id, tenant_id, ultravox_call_id, status, recording_url, direction, caller_number, called_number")
     .not("ultravox_call_id", "is", null)
     .in("status", ["ringing", "initiated", "initiating", "in_progress"])
     .limit(200);
@@ -148,7 +164,7 @@ export async function reconcileActiveCalls(
   // actually missing something below, so nothing is re-hit needlessly.
   const completedQuery = supabase
     .from("calls")
-    .select("id, tenant_id, ultravox_call_id, status, recording_url")
+    .select("id, tenant_id, ultravox_call_id, status, recording_url, direction, caller_number, called_number")
     .not("ultravox_call_id", "is", null)
     .eq("status", "completed")
     .gte("started_at", sixHoursAgo)

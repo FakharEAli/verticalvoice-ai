@@ -97,6 +97,23 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Respect the contact book's do-not-call flag — a flag that doesn't stop
+    // a dial is worse than no flag at all.
+    const { data: dncContact } = await admin
+      .from("contacts")
+      .select("id")
+      .eq("tenant_id", tenant_id)
+      .eq("phone", to_number)
+      .eq("do_not_call", true)
+      .maybeSingle();
+
+    if (dncContact) {
+      return NextResponse.json(
+        { error: "This number is marked do-not-call in your contacts." },
+        { status: 403 }
+      );
+    }
+
     const { data: businessProfile } = await admin
       .from("business_profiles")
       .select("business_name, timezone")
