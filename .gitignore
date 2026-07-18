@@ -38,6 +38,9 @@ yarn-error.log*
 # env files (can opt-in for committing if needed)
 .env*
 
+# local AI agent tooling state (transient; config in .claude/ is committed)
+.claude/state/
+
 # vercel
 .vercel
 

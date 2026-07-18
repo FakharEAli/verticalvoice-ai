@@ -93,6 +93,7 @@ export class TwilioSmsAdapter implements MessagingAdapter {
   }
 
   async sendEmail(_input: SendEmailInput): Promise<MessageRef> {
+    void _input;
     throw new Error(
       "TwilioSmsAdapter does not support email. Use a dedicated email adapter.",
     );

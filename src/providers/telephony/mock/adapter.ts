@@ -73,6 +73,7 @@ export const mockTelephonyAdapter: TelephonyProvider = {
   },
 
   async validateWebhook(_request: Request): Promise<boolean> {
+    void _request;
     logger.debug('mock-telephony: validating webhook (always returns true)');
     return true;
   },

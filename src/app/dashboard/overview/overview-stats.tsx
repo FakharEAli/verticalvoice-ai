@@ -38,31 +38,30 @@ function usePrefersReducedMotion(): boolean {
 
 /** Ease-out count-up from 0 to `target` on mount. */
 function useCountUp(target: number, animate: boolean): number {
-  const [value, setValue] = React.useState(animate ? 0 : target);
+  const [animatedValue, setAnimatedValue] = React.useState(target);
 
   React.useEffect(() => {
-    if (!animate) {
-      setValue(target);
-      return;
-    }
+    if (!animate) return;
     let raf = 0;
     const duration = 900;
     const start = performance.now();
     const tick = (now: number) => {
       const t = Math.min(1, (now - start) / duration);
       const eased = 1 - Math.pow(1 - t, 3);
-      setValue(target * eased);
+      setAnimatedValue(target * eased);
       if (t < 1) {
         raf = requestAnimationFrame(tick);
       } else {
-        setValue(target);
+        setAnimatedValue(target);
       }
     };
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
   }, [target, animate]);
 
-  return value;
+  // When not animating, always reflect `target` directly instead of
+  // resetting state synchronously in the effect body.
+  return animate ? animatedValue : target;
 }
 
 function formatDuration(totalSeconds: number): string {

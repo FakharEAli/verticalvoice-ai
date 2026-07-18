@@ -1,6 +1,7 @@
 {
   "name": "verticalvoice-ai",
   "version": "0.1.0",
+  "description": "Multi-tenant B2B SaaS platform providing AI voice calling agents for healthcare clinics, restaurants, and real estate agencies.",
   "private": true,
   "scripts": {
     "dev": "next dev",

@@ -162,8 +162,12 @@ export function LiveCallOrb({
   }, [timerEnabled, reducedMotion, state]);
 
   React.useEffect(() => {
-    // Reset the clock whenever we leave the live state.
-    if (state !== "live") setSeconds(0);
+    // Reset the clock whenever we leave the live state. Deferred to a
+    // fresh frame rather than setting state synchronously in the effect
+    // body (React discourages it — see set-state-in-effect).
+    if (state === "live") return;
+    const frame = requestAnimationFrame(() => setSeconds(0));
+    return () => cancelAnimationFrame(frame);
   }, [state]);
 
   // ---- Typewriter transcript -------------------------------------------
@@ -177,8 +181,13 @@ export function LiveCallOrb({
     let currentChar = 0;
     let timeout: ReturnType<typeof setTimeout>;
 
-    setLineIndex(0);
-    setCharIndex(0);
+    // Reset deferred to a fresh frame rather than setting state
+    // synchronously in the effect body (React discourages it — see
+    // set-state-in-effect).
+    const resetFrame = requestAnimationFrame(() => {
+      setLineIndex(0);
+      setCharIndex(0);
+    });
 
     const tick = () => {
       const text = lines[currentLine].text;
@@ -200,7 +209,10 @@ export function LiveCallOrb({
     };
 
     timeout = setTimeout(tick, 400);
-    return () => clearTimeout(timeout);
+    return () => {
+      cancelAnimationFrame(resetFrame);
+      clearTimeout(timeout);
+    };
   }, [showTranscript, reducedMotion, lines]);
 
   // ---- Equalizer + pulse ------------------------------------------------

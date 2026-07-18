@@ -27,7 +27,11 @@ export function ScrollReveal({ children, delay = 0, className }: ScrollRevealPro
 
   React.useEffect(() => {
     if (typeof window === 'undefined' || !window.matchMedia) return;
-    setReduced(window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+    const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const update = () => setReduced(mq.matches);
+    update();
+    mq.addEventListener('change', update);
+    return () => mq.removeEventListener('change', update);
   }, []);
 
   React.useEffect(() => {

@@ -240,12 +240,16 @@ function AgentBubble({
 
   useEffect(() => {
     if (reduced) {
-      setShown(message.text.length);
-      onDone?.();
-      return;
+      // Defer to a fresh frame rather than setting state synchronously in
+      // the effect body (React discourages it — see set-state-in-effect).
+      const frame = requestAnimationFrame(() => {
+        setShown(message.text.length);
+        onDone?.();
+      });
+      return () => cancelAnimationFrame(frame);
     }
     let i = 0;
-    setShown(0);
+    const resetFrame = requestAnimationFrame(() => setShown(0));
     const id = window.setInterval(() => {
       i += 1;
       setShown(i);
@@ -254,7 +258,10 @@ function AgentBubble({
         onDone?.();
       }
     }, 18);
-    return () => window.clearInterval(id);
+    return () => {
+      cancelAnimationFrame(resetFrame);
+      window.clearInterval(id);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [message.id, reduced]);
 

@@ -114,15 +114,22 @@ export function IndustryGate() {
   const [checked, setChecked] = React.useState(false);
 
   React.useEffect(() => {
+    if (typeof window === 'undefined' || !window.matchMedia) return;
+    const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const update = () => setReduced(mq.matches);
+    update();
+    mq.addEventListener('change', update);
+    return () => mq.removeEventListener('change', update);
+  }, []);
+
+  React.useEffect(() => {
     if (typeof window === 'undefined') return;
 
-    if (window.matchMedia) {
-      setReduced(window.matchMedia('(prefers-reduced-motion: reduce)').matches);
-    }
-
     if (readStoredChoice()) {
-      setChecked(true);
-      return;
+      // Defer to a fresh frame rather than setting state synchronously in
+      // the effect body (React discourages it — see set-state-in-effect).
+      const frame = requestAnimationFrame(() => setChecked(true));
+      return () => cancelAnimationFrame(frame);
     }
 
     const timer = window.setTimeout(() => {

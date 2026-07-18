@@ -206,6 +206,8 @@ async function checkDNC(tenantId: string, phone: string): Promise<ComplianceChec
  * In production, resolve callee timezone from area code or prior records.
  */
 async function checkQuietHours(_tenantId: string, _phone: string): Promise<ComplianceCheck> {
+  void _tenantId;
+  void _phone;
   // TODO: resolve callee timezone from area code or stored preference
   const currentHour = new Date().getUTCHours();
 

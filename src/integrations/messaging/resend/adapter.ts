@@ -32,6 +32,7 @@ export class ResendEmailAdapter implements MessagingAdapter {
   }
 
   async sendSms(_input: SendSmsInput): Promise<MessageRef> {
+    void _input;
     throw new Error(
       "ResendEmailAdapter does not support SMS. Use a dedicated SMS adapter.",
     );

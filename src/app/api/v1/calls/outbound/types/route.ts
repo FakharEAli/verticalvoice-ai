@@ -6,6 +6,7 @@ import "@/industries";
 import { getIndustryPack } from "@/industries/core/registry";
 
 export async function GET(_request: NextRequest) {
+  void _request;
   try {
     const supabase = await createServerClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
