@@ -4,8 +4,17 @@ import { describe, expect, it, beforeEach, vi } from "vitest";
 
 const mockCreateClient = vi.fn();
 
-vi.mock("@/lib/database/supabase-server", () => ({
-  createClient: (...args: unknown[]) => mockCreateClient(...args),
+// The gateway resolves calls/tenants via the service-role admin client
+// (`createAdminClient` from `@/lib/database/supabase-admin`), not the
+// cookie-scoped server client (`createClient` from
+// `@/lib/database/supabase-server`) — the latter requires `next/headers`
+// request context that doesn't exist in this pure-logic contract test.
+// Mocking the wrong module silently no-ops: `mockCreateClient` never gets
+// called, `createAdminClient()` falls through to the real (unconfigured)
+// Supabase client, and every DB lookup fails, so the gateway always throws
+// "Call not found" regardless of which fixture path a test is exercising.
+vi.mock("@/lib/database/supabase-admin", () => ({
+  createAdminClient: (...args: unknown[]) => mockCreateClient(...args),
 }));
 
 interface SupabaseMockConfig {
@@ -123,7 +132,7 @@ describe("handleToolCall (tool gateway contract)", () => {
   describe("disabled tools", () => {
     it("rejects a tool call for a tool not present in the token's enabled_tools list", async () => {
       const { client } = makeSupabaseMock(defaultSupabaseConfig());
-      mockCreateClient.mockResolvedValue(client);
+      mockCreateClient.mockReturnValue(client);
 
       const token = createCallToken(CALL_ID, TENANT_ID, ["check-availability"]);
       const result = await handleToolCall(
@@ -137,7 +146,7 @@ describe("handleToolCall (tool gateway contract)", () => {
 
     it("allows a tool call for a tool present in the token's enabled_tools list", async () => {
       const { client } = makeSupabaseMock(defaultSupabaseConfig());
-      mockCreateClient.mockResolvedValue(client);
+      mockCreateClient.mockReturnValue(client);
 
       const token = createCallToken(CALL_ID, TENANT_ID, ["check-availability"]);
       const result = await handleToolCall(
@@ -150,7 +159,7 @@ describe("handleToolCall (tool gateway contract)", () => {
 
     it("allows any registered tool when enabled_tools is empty (no restriction configured)", async () => {
       const { client } = makeSupabaseMock(defaultSupabaseConfig());
-      mockCreateClient.mockResolvedValue(client);
+      mockCreateClient.mockReturnValue(client);
 
       const token = createCallToken(CALL_ID, TENANT_ID, []);
       const result = await handleToolCall(
@@ -163,7 +172,7 @@ describe("handleToolCall (tool gateway contract)", () => {
 
     it("rejects a tool name with no registered schema", async () => {
       const { client } = makeSupabaseMock(defaultSupabaseConfig());
-      mockCreateClient.mockResolvedValue(client);
+      mockCreateClient.mockReturnValue(client);
 
       const token = createCallToken(CALL_ID, TENANT_ID, []);
       const result = await handleToolCall(makeRequest({ body: {} }, token), "not-a-real-tool");
@@ -176,7 +185,7 @@ describe("handleToolCall (tool gateway contract)", () => {
   describe("idempotency", () => {
     it("returns the cached result on retry with the same idempotency key without re-executing", async () => {
       const { client, insertMock } = makeSupabaseMock(defaultSupabaseConfig());
-      mockCreateClient.mockResolvedValue(client);
+      mockCreateClient.mockReturnValue(client);
 
       const token = createCallToken(CALL_ID, TENANT_ID, ["create-booking"]);
       const body = {
@@ -210,7 +219,7 @@ describe("handleToolCall (tool gateway contract)", () => {
 
     it("executes independently (no cross-contamination) for different idempotency keys", async () => {
       const { client, insertMock } = makeSupabaseMock(defaultSupabaseConfig());
-      mockCreateClient.mockResolvedValue(client);
+      mockCreateClient.mockReturnValue(client);
 
       const token = createCallToken(CALL_ID, TENANT_ID, ["create-booking"]);
       const body = {
@@ -228,7 +237,7 @@ describe("handleToolCall (tool gateway contract)", () => {
 
     it("does not cache/dedupe when no idempotency key is supplied", async () => {
       const { client, insertMock } = makeSupabaseMock(defaultSupabaseConfig());
-      mockCreateClient.mockResolvedValue(client);
+      mockCreateClient.mockReturnValue(client);
 
       const token = createCallToken(CALL_ID, TENANT_ID, ["create-booking"]);
       const body = {
@@ -248,7 +257,7 @@ describe("handleToolCall (tool gateway contract)", () => {
   describe("input validation and tenant checks", () => {
     it("rejects a call whose input fails schema validation", async () => {
       const { client } = makeSupabaseMock(defaultSupabaseConfig());
-      mockCreateClient.mockResolvedValue(client);
+      mockCreateClient.mockReturnValue(client);
 
       const token = createCallToken(CALL_ID, TENANT_ID, ["create-booking"]);
       const result = await handleToolCall(
@@ -264,7 +273,7 @@ describe("handleToolCall (tool gateway contract)", () => {
       const config = defaultSupabaseConfig();
       config.call = { data: { id: CALL_ID, tenant_id: "some-other-tenant" }, error: null };
       const { client } = makeSupabaseMock(config);
-      mockCreateClient.mockResolvedValue(client);
+      mockCreateClient.mockReturnValue(client);
 
       const token = createCallToken(CALL_ID, TENANT_ID, ["check-availability"]);
       const result = await handleToolCall(
@@ -283,7 +292,7 @@ describe("handleToolCall (tool gateway contract)", () => {
         error: null,
       };
       const { client } = makeSupabaseMock(config);
-      mockCreateClient.mockResolvedValue(client);
+      mockCreateClient.mockReturnValue(client);
 
       const token = createCallToken(CALL_ID, TENANT_ID, ["check-availability"]);
       const result = await handleToolCall(
