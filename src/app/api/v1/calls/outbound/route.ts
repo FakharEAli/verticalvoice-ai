@@ -10,7 +10,7 @@ import { z } from "zod";
 import { phoneSchema } from "@/lib/validation/schemas";
 import "@/industries";
 import { getIndustryPack } from "@/industries/core/registry";
-import { stripUnresolvedPlaceholders } from "@/industries/core/compiler";
+import { buildOutboundSystemPrompt } from "@/lib/telephony/outbound-prompt";
 
 const outboundCallSchema = z.object({
   to_number: phoneSchema,
@@ -161,29 +161,12 @@ export async function POST(request: NextRequest) {
     }
 
     const businessName = businessProfile?.business_name ?? "the business";
-    // fillTemplate leaves `{{var}}` in place for absent optional variables, so
-    // strip the leftovers — otherwise the agent reads the literal braces aloud,
-    // the same defect the compiler was hardened against.
-    const filledScript = stripUnresolvedPlaceholders(
-      fillTemplate(callType.promptTemplate, variables),
-    );
-
-    // Outbound used to build its own throwaway prompt, which meant it inherited
-    // none of the compiled agent's identity or the shared voice rules (turn
-    // brevity, one question per turn, agent-owns-the-hangup). Only inbound got
-    // those. Layer the call's purpose on top of the compiled prompt instead, so
-    // both directions sound like the same person.
-    const outboundFraming = [
-      `THIS CALL: You are placing an outbound ${callType.category} call on behalf of ${businessName}. The person did not call you — you called them, so state who you are and why you are calling in your first sentence, then stop and let them respond.`,
-      filledScript,
-      `If they ask not to be called again, acknowledge it plainly, tell them you'll remove them, and end the call. Do not argue or re-pitch.`,
-    ]
-      .filter(Boolean)
-      .join("\n\n");
-
-    const baseSystemPrompt = compiledPrompt
-      ? `${compiledPrompt}\n\n${outboundFraming}`
-      : `You are the phone agent for ${businessName}.\n\n${outboundFraming}`;
+    const baseSystemPrompt = buildOutboundSystemPrompt({
+      compiledPrompt,
+      businessName,
+      category: callType.category,
+      filledScript: fillTemplate(callType.promptTemplate, variables),
+    });
     const systemPrompt = withCurrentDateContext(baseSystemPrompt, businessProfile?.timezone);
 
     // Insert the call row first (provider_call_id is nullable) so we have
