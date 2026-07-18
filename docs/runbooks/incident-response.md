@@ -139,11 +139,11 @@ load from `audit_events`/`calls` writes, or repeated identical events.
    from unfamiliar `actor_id`s.
 3. Identify scope: which tenant(s), which tables, what data (PII/PHI risk
    depends on industry — healthcare tenants may hold patient data, see
-   `known-limitations.md` on HIPAA/BAA status).
+   `docs/compliance/known-limitations.md` on HIPAA/BAA status).
 4. If confirmed, this is a legal/compliance event, not just an engineering
    one — VerticalVoice AI does not currently have a formal breach
    notification process or legal counsel on retainer (see
-   `known-limitations.md`). Escalate to whoever owns that decision before
+   `docs/compliance/known-limitations.md`). Escalate to whoever owns that decision before
    any external communication.
 5. Once contained, use `exportTenantData` (`src/domain/privacy/service.ts`)
    to capture the affected tenant's current data state for the incident
@@ -186,4 +186,4 @@ There is no automated blue/green deploy or canary system documented in this
 repo today. A bad deploy should be rolled back via your hosting platform's
 standard "redeploy previous build" mechanism (document your specific
 platform's steps here once production hosting is finalized — see
-`known-limitations.md`).
+`docs/compliance/known-limitations.md`).

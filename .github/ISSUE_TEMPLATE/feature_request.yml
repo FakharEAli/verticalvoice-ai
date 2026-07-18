@@ -1,0 +1,57 @@
+name: Feature request
+description: Suggest an idea or improvement for VerticalVoice AI
+labels:
+  - enhancement
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the suggestion. Since this project is organized around
+        a shared core plus vertical packs (`src/domain`, `src/industries`),
+        it helps to know whether your idea is specific to one industry or
+        applies platform-wide.
+
+  - type: dropdown
+    id: vertical
+    attributes:
+      label: Vertical
+      description: Which industry pack does this apply to?
+      options:
+        - Healthcare
+        - Restaurant
+        - Real Estate
+        - Platform-wide (core engine, dashboard, providers, etc.)
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem does this solve?
+      description: What's missing or painful today?
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: What would you like to happen? Sketch the behavior, UI, or API shape if relevant.
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Any workarounds or alternative approaches you've thought about.
+    validations:
+      required: false
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: Additional context
+      description: Anything else — links, mockups, related issues.
+    validations:
+      required: false

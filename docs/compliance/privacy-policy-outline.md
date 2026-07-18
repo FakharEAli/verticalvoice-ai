@@ -130,7 +130,13 @@ Reference the *existence* of controls without over-promising:
   audit logging, rate limiting. Do not claim SOC 2 / ISO 27001 / specific
   certifications unless actually obtained — see `known-limitations.md`.
 
-## 10. Healthcare-specific (HIPAA) considerations
+## 10. Vertical-specific considerations
+
+Each Industry Pack carries a different regulatory surface. A tenant's policy
+addendum must be drafted against the pack it actually runs, not against a
+generic template.
+
+### 10a. Healthcare (HIPAA)
 
 **Explicitly flag current status**: no signed Business Associate Agreements
 (BAAs) with sub-processors are confirmed in place per
@@ -138,6 +144,39 @@ Reference the *existence* of controls without over-promising:
 a HIPAA Notice of Privacy Practices) **cannot claim HIPAA compliance**
 until BAAs are executed and a compliance review is done. This is the single
 highest-risk gap for the healthcare vertical.
+
+The data at issue is PHI-adjacent: patient name, phone, date of birth,
+stated reason for visit, and call transcripts that may contain volunteered
+health detail. The pack's `no_diagnosis` policy also means the agent must
+never be described to end users as providing clinical advice.
+
+### 10b. Restaurant (payment-adjacent ordering)
+
+The restaurant pack handles order and reservation data and integrates with
+POS providers. The policy must state plainly that **card/payment details are
+not collected, spoken to, or stored by the voice agent** — payment capture is
+delegated to the POS or payment provider, whose own privacy terms then apply.
+Per `known-limitations.md`, no PCI DSS scope assessment has been performed,
+so no PCI compliance claim may appear in the policy.
+
+Allergen and dietary statements made by a caller are health-adjacent personal
+data even outside a healthcare context, and the agent provides allergen
+information **without guaranteeing** allergen-free preparation. The policy
+should disclose that this information is recorded with the order.
+
+### 10c. Real estate (Fair Housing)
+
+The real estate pack processes housing-inquiry data — budget, desired
+location, household requirements, showing history — which is regulated
+differently from the other two verticals. The governing constraint is
+anti-discrimination rather than confidentiality: the agent enforces a
+`fair_housing` policy refusing to steer on protected characteristics, and it
+must not record or act on inferences about a caller's protected class.
+
+Where a caller volunteers such information, the policy should state how it is
+handled and that it is not used as a filtering criterion. Per
+`known-limitations.md`, this control is engineering-tested but not
+legally reviewed, and protected classes vary by state and municipality.
 
 ## 11. Children's data
 

@@ -70,7 +70,7 @@ sequenceDiagram
     Dash-->>Caller: (indirectly) Business sees the<br/>booked appointment on /dashboard/calls
 ```
 
-The key takeaway for judges: the voice runtime never talks to the database
+The key takeaway: the voice runtime never talks to the database
 directly. Every tool invocation is forced through the gateway's 10-step
 pipeline — auth, tenant resolution, config resolution, enablement check,
 schema validation, policy evaluation, idempotency, execution, redaction, and

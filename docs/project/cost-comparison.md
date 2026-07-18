@@ -58,7 +58,7 @@ what's being demonstrated, controlled almost entirely by the
 | Mode | Approx. monthly cost | What's running | How it's achieved |
 |---|---|---|---|
 | **Local Development** | Near $0 | Full app, full UI, full evaluation suite, no real phone calls | `VOICE_PROVIDER=mock` and `TELEPHONY_PROVIDER=mock` — the provider interfaces are satisfied by mock implementations, so the compiler, tool gateway, policy engine, dashboards, and the 140-scenario evaluation suite all run against synthetic data with zero external spend |
-| **Demonstration** | ~$20–75/month | A handful of real phone numbers + real Ultravox/Twilio minutes for live demo calls (e.g. judge-facing calls to the 3 seeded demo tenants) | Real credentials plugged into `.env.local`, low call volume, one number per vertical, no outbound calling activated |
+| **Demonstration** | ~$20–75/month | A handful of real phone numbers + real Ultravox/Twilio minutes for live demo calls (e.g. demonstration calls to the 3 seeded demo tenants) | Real credentials plugged into `.env.local`, low call volume, one number per vertical, no outbound calling activated |
 | **Pilot** | ~$100–300/month | One or a few real small-business tenants running live inbound (and possibly limited outbound) traffic, real Supabase project (not local), real integrations (Calendar/POS/CRM) turned on per tenant | Scales with call volume; the per-100-calls math above is the basis for estimating this range at realistic small-business call volumes (a few hundred to low-thousands of calls/month) |
 
 The provider abstraction layer (`src/providers/voice`, `src/providers/telephony`)
