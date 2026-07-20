@@ -225,7 +225,7 @@ export async function POST(request: NextRequest) {
         tenant_id: tenant.id,
         name: `${fields.businessName} Agent`,
         system_prompt: compiled.systemPrompt,
-        model: "gpt-4o",
+        model: "ultravox-v0.7",
         temperature: 0.7,
         tools: compiled.activeTools as unknown as Json,
         config: {
@@ -249,7 +249,7 @@ export async function POST(request: NextRequest) {
     const agentPageSnapshot = {
       draft_id: draft.id,
       system_prompt: compiled.systemPrompt,
-      model: "gpt-4o",
+      model: "ultravox-v0.7",
       temperature: 0.7,
       tools: compiled.activeTools,
       business_name: fields.businessName,
