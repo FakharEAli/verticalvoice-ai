@@ -14,9 +14,13 @@ const finalizeSchema = z.object({
   industry: z.enum(["healthcare", "restaurant", "real_estate"]),
   businessName: z.string().min(1).max(200),
   websiteUrl: z.string().url().optional().or(z.literal("")),
-  country: z.string().min(1),
-  timezone: z.string().min(1),
-  mainPhone: z.string().min(1),
+  // Optional: none of these is required to create a working agent, and the
+  // onboarding UI does not force them. Requiring them here produced an "Invalid
+  // input" wall at the very last step for anyone who left the business phone or
+  // country blank. Timezone is normally auto-detected but defaults defensively.
+  country: z.string().optional().default(""),
+  timezone: z.string().optional().default("UTC"),
+  mainPhone: z.string().optional().default(""),
   businessAddress: z.string().optional(),
   contactName: z.string().min(1),
   contactEmail: z.string().email(),
