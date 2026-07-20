@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@/lib/database/supabase-server";
-import { getCurrentTenantId } from "@/domain/tenants/current";
 import {
   filterVoices,
   getVoiceCatalog,
@@ -11,12 +10,14 @@ import {
 /**
  * Lists the Ultravox voice catalog for the voice picker.
  *
- * Authenticated and tenant-scoped: the catalog is not tenant data, but it is
- * bought with our Ultravox key, so it is not something to hand to anonymous
- * callers. Reading the session cookie makes this route dynamic, which is what
- * we want — Next.js does not cache Route Handlers by default, and the
- * in-memory catalog cache in `@/lib/voices/catalog` is what actually keeps us
- * off the upstream API.
+ * Authenticated but NOT tenant-scoped: the catalog is generic Ultravox data,
+ * not tenant data, and it is needed during onboarding — where the user is
+ * signed in but has no tenant yet (the tenant is created at the final step). A
+ * tenant gate here would break the onboarding voice picker. It is still bought
+ * with our Ultravox key, so it is not handed to anonymous callers. Reading the
+ * session cookie makes this route dynamic, which is what we want — Next.js does
+ * not cache Route Handlers by default, and the in-memory catalog cache in
+ * `@/lib/voices/catalog` is what actually keeps us off the upstream API.
  *
  * The `definition` blob Ultravox returns (Eleven Labs ids, models) never
  * reaches the browser; only `toVoiceSummary`'s trimmed shape does.
@@ -35,14 +36,6 @@ export async function GET(request: NextRequest) {
 
     if (authError || !user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const tenant_id = await getCurrentTenantId(user.id);
-    if (!tenant_id) {
-      return NextResponse.json(
-        { error: "No tenant found for this account." },
-        { status: 403 }
-      );
     }
 
     const catalog = await getVoiceCatalog();

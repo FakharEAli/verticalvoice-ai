@@ -13,6 +13,7 @@ import { Switch } from '@/components/ui/switch';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
+import { getIndustryToolCatalog } from '@/industries/core/tool-catalog';
 import type { StepProps } from '../types';
 
 function getConfig<T>(data: StepProps['data'], key: string, fallback: T): T {
@@ -490,6 +491,57 @@ function RealEstateForm({ data, updateData }: StepProps) {
   );
 }
 
+function AgentToolsChecklist({ data, updateData }: StepProps) {
+  if (!data.industry) return null;
+
+  const catalog = getIndustryToolCatalog(data.industry);
+  if (catalog.length === 0) return null;
+
+  const disabled = data.disabledToolIds ?? [];
+
+  const setEnabled = (toolId: string, enabled: boolean) => {
+    const next = enabled
+      ? disabled.filter((id) => id !== toolId)
+      : disabled.includes(toolId)
+        ? disabled
+        : [...disabled, toolId];
+    updateData({ disabledToolIds: next });
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="space-y-1">
+        <p className="text-sm font-medium">What your agent can do</p>
+        <p className="text-xs text-muted-foreground">
+          These are the actions your agent can take on a call. Turn off anything
+          you don&apos;t want it doing.
+        </p>
+      </div>
+
+      <div className="space-y-3">
+        {catalog.map((tool) => {
+          const enabled = !disabled.includes(tool.id);
+          return (
+            <div
+              key={tool.id}
+              className="flex items-center justify-between gap-4 rounded-lg border p-4"
+            >
+              <div className="min-w-0">
+                <p className="text-sm font-medium">{tool.name}</p>
+                <p className="text-xs text-muted-foreground">{tool.summary}</p>
+              </div>
+              <Switch
+                checked={enabled}
+                onCheckedChange={(checked) => setEnabled(tool.id, checked)}
+              />
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 export function Step4IndustryForm({ data, updateData }: StepProps) {
   if (!data.industry) {
     return (
@@ -521,6 +573,9 @@ export function Step4IndustryForm({ data, updateData }: StepProps) {
           <RealEstateForm data={data} updateData={updateData} />
         </>
       )}
+
+      <Separator className="my-6" />
+      <AgentToolsChecklist data={data} updateData={updateData} />
     </div>
   );
 }

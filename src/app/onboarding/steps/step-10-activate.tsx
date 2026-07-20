@@ -92,6 +92,7 @@ export function Step10Activate({ data, updateData }: StepProps) {
           aiDisclosure: data.aiDisclosure,
           transferNumber: data.transferNumber,
           afterHoursBehavior: data.afterHoursBehavior,
+          disabledToolIds: data.disabledToolIds,
         }),
       });
 

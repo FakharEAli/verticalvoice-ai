@@ -16,12 +16,16 @@ import { Step3Import } from './steps/step-3-import';
 import { Step4IndustryForm } from './steps/step-4-industry-form';
 import { Step5Personality } from './steps/step-5-personality';
 import { Step6Integration } from './steps/step-6-integration';
+import { StepPhone } from './steps/step-phone';
 import { Step7Review } from './steps/step-7-review';
 import { Step8Preflight } from './steps/step-8-preflight';
 import { Step9TestCall } from './steps/step-9-test-call';
 import { Step10Activate } from './steps/step-10-activate';
 
-const STORAGE_KEY = 'verticalvoice_onboarding_state';
+// v2: a Phone-number step was inserted, shifting later step indexes. Bumping
+// the key drops any stale in-progress state saved under the old layout so a
+// returning session can't resume on a mismatched step.
+const STORAGE_KEY = 'verticalvoice_onboarding_state_v2';
 
 // Short mono eyebrow shown above each step's serif question headline.
 const STEP_EYEBROWS = [
@@ -31,6 +35,7 @@ const STEP_EYEBROWS = [
   'Configuration',
   'Personality',
   'Integrations',
+  'Phone number',
   'Review',
   'Preflight',
   'Test call',
@@ -110,12 +115,14 @@ export default function OnboardingPage() {
       case 5:
         return <Step6Integration {...props} />;
       case 6:
-        return <Step7Review {...props} onJumpToStep={jumpToStep} />;
+        return <StepPhone {...props} />;
       case 7:
-        return <Step8Preflight {...props} />;
+        return <Step7Review {...props} onJumpToStep={jumpToStep} />;
       case 8:
-        return <Step9TestCall {...props} />;
+        return <Step8Preflight {...props} />;
       case 9:
+        return <Step9TestCall {...props} />;
+      case 10:
         return <Step10Activate {...props} />;
       default:
         return null;

@@ -7,6 +7,7 @@ import { z } from "zod";
 import "@/industries";
 import { getIndustryPack } from "@/industries/core/registry";
 import { compileAgent, type TenantConfig } from "@/industries/core/compiler";
+import { logger } from "@/lib/observability/logger";
 import type { Json } from "@/lib/database/types";
 
 const finalizeSchema = z.object({
@@ -31,7 +32,29 @@ const finalizeSchema = z.object({
   aiDisclosure: z.boolean(),
   transferNumber: z.string().optional(),
   afterHoursBehavior: z.string().optional(),
+  // Pack tools the operator switched OFF in the onboarding tools step. Absent
+  // means "keep every tool the industry pack ships with".
+  disabledToolIds: z.array(z.string()).default([]),
 });
+
+/**
+ * A stable, unique, obviously-fictional phone number for a brand-new tenant.
+ *
+ * Every dashboard test call and inbound route resolves the tenant by the dialed
+ * number in `phone_numbers`, so a tenant with no number cannot place a test
+ * call at all — which is exactly what stranded new customers. This gives them a
+ * working number the moment onboarding finishes; a real Twilio number is bought
+ * later from the Phone Numbers page. Uses the 555-01xx range reserved for
+ * fiction so it can never collide with a real dialable number, and derives the
+ * digits from the tenant id so it is deterministic and unique per tenant.
+ */
+function demoNumberForTenant(tenantId: string): string {
+  let h = 0;
+  for (const ch of tenantId) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+  const areaCode = 200 + (h % 800); // 200–999
+  const lastTwo = String(h % 100).padStart(2, "0");
+  return `+1${areaCode}55501${lastTwo}`;
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -129,6 +152,44 @@ export async function POST(request: NextRequest) {
         { error: `Failed to save policy settings: ${policyError.message}` },
         { status: 500 }
       );
+    }
+
+    // Give the tenant a working phone number immediately. Without an active
+    // phone_numbers row the Test Center refuses every call ("no active phone
+    // number"), which is the dead end new customers hit right after finishing
+    // setup. This demo number makes the browser test call route correctly from
+    // the first click; a real Twilio number is added later from the Phone
+    // Numbers page. Non-fatal: a number hiccup must not fail the whole signup.
+    const { error: phoneError } = await admin.from("phone_numbers").insert({
+      tenant_id: tenant.id,
+      number: demoNumberForTenant(tenant.id),
+      provider: "demo",
+      provider_sid: "",
+      status: "active",
+    });
+    if (phoneError) {
+      logger.warn("onboarding: could not provision demo phone number", {
+        tenantId: tenant.id,
+        error: phoneError.message,
+      });
+    }
+
+    // Persist the tools the operator turned off. A missing row means "on", so
+    // we only write the off ones — the default stays "every pack tool enabled".
+    if (fields.disabledToolIds.length > 0) {
+      const { error: toolError } = await admin.from("agent_tool_settings").insert(
+        fields.disabledToolIds.map((toolId) => ({
+          tenant_id: tenant.id,
+          tool_id: toolId,
+          enabled: false,
+        }))
+      );
+      if (toolError) {
+        logger.warn("onboarding: could not save tool selections", {
+          tenantId: tenant.id,
+          error: toolError.message,
+        });
+      }
     }
 
     const pack = getIndustryPack(fields.industry);

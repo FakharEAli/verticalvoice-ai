@@ -6,6 +6,7 @@ import {
   LayoutDashboard,
   Phone,
   PhoneOutgoing,
+  Hash,
   BookUser,
   History,
   Megaphone,
@@ -76,6 +77,11 @@ const mainNavItems = [
     title: "Contacts",
     url: "/dashboard/contacts",
     icon: BookUser,
+  },
+  {
+    title: "Phone Numbers",
+    url: "/dashboard/phone-numbers",
+    icon: Hash,
   },
   {
     title: "Agent",

@@ -42,6 +42,16 @@ export interface OnboardingData {
   transferNumber: string;
   afterHoursBehavior: string;
 
+  // Step 4 - Tools (per-industry). Holds the ids of pack tools the operator
+  // turned OFF; everything not listed stays enabled (the pack default).
+  disabledToolIds: string[];
+
+  // Phone number for the agent. 'demo' provisions a working fictional number at
+  // finalize so the test call works immediately; 'buy' purchases the chosen
+  // real Twilio number after the tenant exists.
+  phoneProvisionMode: 'demo' | 'buy';
+  phoneNumberToBuy: string;
+
   // Step 6 - Integration
   integration: string | null;
   integrationConfig: Record<string, unknown>;
@@ -93,6 +103,9 @@ export const initialOnboardingData: OnboardingData = {
   importedData: {},
   industryConfig: {},
   voiceId: '',
+  disabledToolIds: [],
+  phoneProvisionMode: 'demo',
+  phoneNumberToBuy: '',
   tone: 'professional',
   speakingPace: 'natural',
   greetingStyle: 'friendly',
@@ -145,6 +158,13 @@ export const stepsMeta: StepMeta[] = [
     title: 'Integrations',
     subtitle: 'Connect your existing tools',
     skippable: true,
+    validate: () => true,
+  },
+  {
+    title: 'Phone Number',
+    subtitle: 'Choose the number your agent will use for calls',
+    skippable: false,
+    // A demo number is always provisioned at finalize, so this can't be blocked.
     validate: () => true,
   },
   {

@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@/lib/database/supabase-server";
-import { getCurrentTenantId } from "@/domain/tenants/current";
 import { findVoice, getVoiceCatalog } from "@/lib/voices/catalog";
 
 /**
@@ -12,9 +11,11 @@ import { findVoice, getVoiceCatalog } from "@/lib/voices/catalog";
  * element, so handing the raw URL to the client produces a silent, broken play
  * button. Re-serving the same bytes under `audio/mpeg` fixes it.
  *
- * Authenticated for the same reason the list route is: the catalog is bought
- * with our Ultravox key. The upstream fetch is unauthenticated by design — the
- * storage URL is public and needs no API key.
+ * Authenticated but NOT tenant-scoped, for the same reason the list route is:
+ * the sample clips are generic Ultravox data, needed during onboarding before a
+ * tenant exists, and bought with our Ultravox key rather than being tenant
+ * data. The upstream fetch is unauthenticated by design — the storage URL is
+ * public and needs no API key.
  */
 export async function GET(
   _request: NextRequest,
@@ -31,14 +32,6 @@ export async function GET(
 
     if (authError || !user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const tenant_id = await getCurrentTenantId(user.id);
-    if (!tenant_id) {
-      return NextResponse.json(
-        { error: "No tenant found for this account." },
-        { status: 403 }
-      );
     }
 
     const catalog = await getVoiceCatalog();
