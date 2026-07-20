@@ -38,7 +38,11 @@ function CardTitle({ className, ...props }: React.ComponentProps<"div">) {
     <div
       data-slot="card-title"
       className={cn(
-        "font-heading text-base leading-snug font-medium group-data-[size=sm]/card:text-sm",
+        // Geist, not `font-heading`. The design brief scopes Instrument Serif
+        // to large marketing and auth display only, and never below ~28px;
+        // CardTitle renders at 16px on functional dashboard screens. Pages
+        // that genuinely want the serif opt in with `font-display`.
+        "text-base leading-snug font-medium group-data-[size=sm]/card:text-sm",
         className
       )}
       {...props}
