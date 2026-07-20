@@ -73,7 +73,13 @@ function TabsContent({ className, ...props }: TabsPrimitive.Panel.Props) {
   return (
     <TabsPrimitive.Panel
       data-slot="tabs-content"
-      className={cn("flex-1 text-sm outline-none", className)}
+      // Base UI marks the inactive panel `inert` immediately and reliably,
+      // but its own unmount-on-animation-finish step does not always
+      // complete for panels with no CSS transition of their own, leaving
+      // the inactive panel's content stacked in the layout indefinitely.
+      // This CSS rule hides it the moment it goes inert, independent of
+      // that JS timing: correct whether or not Base UI ever unmounts it.
+      className={cn("flex-1 text-sm outline-none [&[inert]]:hidden", className)}
       {...props}
     />
   )

@@ -1,10 +1,5 @@
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Bot,
   Volume2,
@@ -71,33 +66,6 @@ function verticalMeta(
     default:
       return null;
   }
-}
-
-/** In-page anchored section nav (no client JS; a plain sticky link row). */
-function SectionNav() {
-  const items = [
-    { id: "overview", label: "Overview" },
-    { id: "voice", label: "Voice" },
-    { id: "tools", label: "Engine" },
-    { id: "tools-manager", label: "Tools" },
-    { id: "policy", label: "Instructions" },
-  ];
-  return (
-    <nav
-      aria-label="Agent configuration sections"
-      className="sticky top-4 z-10 -mx-1 flex flex-wrap gap-1 rounded-lg border border-border bg-card/80 p-1 backdrop-blur"
-    >
-      {items.map((item) => (
-        <a
-          key={item.id}
-          href={`#${item.id}`}
-          className="rounded-md px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
-        >
-          {item.label}
-        </a>
-      ))}
-    </nav>
-  );
 }
 
 function PageHeader({ vertical }: { vertical: ReturnType<typeof verticalMeta> }) {
@@ -218,18 +186,39 @@ export default async function AgentPage() {
     <div className="space-y-6">
       <PageHeader vertical={vertical} />
 
-      <SectionNav />
+      <Tabs defaultValue="overview">
+        <TabsList className="w-full justify-start overflow-x-auto">
+          <TabsTrigger value="overview">
+            <Bot className="mr-1.5 size-4" />
+            Overview
+          </TabsTrigger>
+          <TabsTrigger value="voice">
+            <Volume2 className="mr-1.5 size-4" />
+            Voice
+          </TabsTrigger>
+          <TabsTrigger value="engine">
+            <Wrench className="mr-1.5 size-4" />
+            Engine
+          </TabsTrigger>
+          <TabsTrigger value="tools">
+            <Wrench className="mr-1.5 size-4" />
+            Tools
+          </TabsTrigger>
+          <TabsTrigger value="policy">
+            <ShieldCheck className="mr-1.5 size-4" />
+            Instructions
+          </TabsTrigger>
+        </TabsList>
 
-      {/* Current Config Status */}
-      <Card id="overview" className="scroll-mt-20">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Bot className="size-5" />
-            Current Configuration
-          </CardTitle>
-          <CardDescription>Active deployment status and version information.</CardDescription>
-        </CardHeader>
-        <CardContent>
+        {/* Overview: current config status */}
+        <TabsContent value="overview" className="space-y-4">
+          <CardHeader className="px-0">
+            <CardTitle className="flex items-center gap-2">
+              <Bot className="size-5" />
+              Current Configuration
+            </CardTitle>
+            <CardDescription>Active deployment status and version information.</CardDescription>
+          </CardHeader>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <div className="flex items-center gap-3">
               <div className="flex size-10 items-center justify-center rounded-lg bg-success/10">
@@ -272,13 +261,11 @@ export default async function AgentPage() {
               </div>
             </div>
           </div>
-        </CardContent>
-      </Card>
+        </TabsContent>
 
-      <div className="grid gap-6 lg:grid-cols-2">
         {/* Voice & Tone */}
-        <Card id="voice" className="scroll-mt-20">
-          <CardHeader>
+        <TabsContent value="voice" className="space-y-5">
+          <CardHeader className="px-0">
             <CardTitle className="flex items-center gap-2">
               <Volume2 className="size-5" />
               Voice &amp; Tone
@@ -287,19 +274,17 @@ export default async function AgentPage() {
               Voice profile and speech configuration captured in this config.
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-5">
-            {/* Live sample */}
-            <div className="flex justify-center rounded-lg border border-border bg-muted/40 py-5">
-              <LiveCallOrb size="md" state="live" accent={accent} showTimer={false} />
-            </div>
+          {/* Live sample */}
+          <div className="flex justify-center rounded-lg border border-border bg-muted/40 py-5">
+            <LiveCallOrb size="md" state="live" accent={accent} showTimer={false} />
+          </div>
 
-            <VoiceStudio currentVoiceId={snapshot.voice?.voice_id ?? null} />
-          </CardContent>
-        </Card>
+          <VoiceStudio currentVoiceId={snapshot.voice?.voice_id ?? null} />
+        </TabsContent>
 
         {/* Model & Tools */}
-        <Card id="tools" className="scroll-mt-20">
-          <CardHeader>
+        <TabsContent value="engine" className="space-y-4">
+          <CardHeader className="px-0">
             <CardTitle className="flex items-center gap-2">
               <Wrench className="size-5" />
               Model &amp; Tools
@@ -308,47 +293,41 @@ export default async function AgentPage() {
               The language model and capabilities compiled into this config.
             </CardDescription>
           </CardHeader>
-          <CardContent>
-            <EngineConfig
-              initialTemperature={snapshot.temperature ?? null}
-              initialSpeed={snapshot.voice?.speed ?? null}
-              initialLanguage={snapshot.voice?.language ?? null}
-              initialModel={snapshot.model ?? null}
-            />
-          </CardContent>
-        </Card>
-      </div>
+          <EngineConfig
+            initialTemperature={snapshot.temperature ?? null}
+            initialSpeed={snapshot.voice?.speed ?? null}
+            initialLanguage={snapshot.voice?.language ?? null}
+            initialModel={snapshot.model ?? null}
+          />
+        </TabsContent>
 
-      {/* Tools — enable/disable, inspect, and build custom ones */}
-      <Card id="tools-manager" className="scroll-mt-20">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Wrench className="size-5" />
-            Tools
-          </CardTitle>
-          <CardDescription>
-            What your agent can actually do on a call. Turn tools on or off, see exactly what each
-            one collects, and add your own.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
+        {/* Tools — enable/disable, inspect, and build custom ones */}
+        <TabsContent value="tools" className="space-y-4">
+          <CardHeader className="px-0">
+            <CardTitle className="flex items-center gap-2">
+              <Wrench className="size-5" />
+              Tools
+            </CardTitle>
+            <CardDescription>
+              What your agent can actually do on a call. Turn tools on or off, see exactly what each
+              one collects, and add your own.
+            </CardDescription>
+          </CardHeader>
           <ToolManager />
-        </CardContent>
-      </Card>
+        </TabsContent>
 
-      {/* Policy & Behavior (system prompt) */}
-      <Card id="policy" className="scroll-mt-20">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <ShieldCheck className="size-5" />
-            Policy &amp; Behavior
-          </CardTitle>
-          <CardDescription>
-            The instructions and guardrails driving this agent&apos;s behavior on calls.
-            Edit them here and save to publish a new version.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
+        {/* Policy & Behavior (system prompt) */}
+        <TabsContent value="policy" className="space-y-4">
+          <CardHeader className="px-0">
+            <CardTitle className="flex items-center gap-2">
+              <ShieldCheck className="size-5" />
+              Policy &amp; Behavior
+            </CardTitle>
+            <CardDescription>
+              The instructions and guardrails driving this agent&apos;s behavior on calls.
+              Edit them here and save to publish a new version.
+            </CardDescription>
+          </CardHeader>
           {snapshot.system_prompt ? (
             <SystemPromptEditor initialPrompt={snapshot.system_prompt} />
           ) : (
@@ -361,8 +340,8 @@ export default async function AgentPage() {
               Compiled {formatDate(snapshot.compiled_at)}
             </p>
           )}
-        </CardContent>
-      </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

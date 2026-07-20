@@ -6,6 +6,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Heart,
   UtensilsCrossed,
@@ -107,9 +108,25 @@ function EmptyRow({ label }: { label: string }) {
 }
 
 const VERTICAL_TINT = {
-  healthcare: { icon: "text-vertical-healthcare", border: "border-t-vertical-healthcare/40" },
-  restaurant: { icon: "text-vertical-restaurant", border: "border-t-vertical-restaurant/40" },
-  realestate: { icon: "text-vertical-realestate", border: "border-t-vertical-realestate/40" },
+  healthcare: {
+    icon: "text-vertical-healthcare",
+    border: "border-t-vertical-healthcare/40",
+    // `!` forces these to win over the base TabsTrigger's unconditional
+    // `text-foreground/60`, which otherwise ties on cascade order with the
+    // plain (non-`!`) `data-active:` variant and can render as muted ink
+    // instead of the vertical jewel on the active tab.
+    tab: "data-active:!text-vertical-healthcare data-active:after:!bg-vertical-healthcare",
+  },
+  restaurant: {
+    icon: "text-vertical-restaurant",
+    border: "border-t-vertical-restaurant/40",
+    tab: "data-active:!text-vertical-restaurant data-active:after:!bg-vertical-restaurant",
+  },
+  realestate: {
+    icon: "text-vertical-realestate",
+    border: "border-t-vertical-realestate/40",
+    tab: "data-active:!text-vertical-realestate data-active:after:!bg-vertical-realestate",
+  },
 } as const;
 
 // ─── Healthcare ──────────────────────────────────────────────────────
@@ -160,7 +177,27 @@ async function HealthcarePanel({ supabase, tenantId }: { supabase: Awaited<Retur
   const insurance = (insuranceRows ?? []).slice(0, 10);
 
   return (
-    <div className="grid gap-6 lg:grid-cols-2">
+    <Tabs defaultValue="appointments">
+      <TabsList variant="line">
+        <TabsTrigger value="appointments" className={t.tab}>
+          <CalendarCheck className="mr-1.5 size-4" />
+          Appointments
+        </TabsTrigger>
+        <TabsTrigger value="waitlist" className={t.tab}>
+          <Clock className="mr-1.5 size-4" />
+          Waitlist
+        </TabsTrigger>
+        <TabsTrigger value="refills" className={t.tab}>
+          <Pill className="mr-1.5 size-4" />
+          Refill Requests
+        </TabsTrigger>
+        <TabsTrigger value="insurance" className={t.tab}>
+          <ShieldCheck className="mr-1.5 size-4" />
+          Insurance Queue
+        </TabsTrigger>
+      </TabsList>
+
+      <TabsContent value="appointments" className="mt-4">
       <Card className={`border-t-2 ${t.border}`}>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -171,7 +208,7 @@ async function HealthcarePanel({ supabase, tenantId }: { supabase: Awaited<Retur
         </CardHeader>
         <CardContent>
           {!appointments?.length ? (
-            <EmptyRow label="No upcoming appointments yet — booked calls will show up here." />
+            <EmptyRow label="No upcoming appointments yet. Booked calls will show up here." />
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
@@ -216,7 +253,9 @@ async function HealthcarePanel({ supabase, tenantId }: { supabase: Awaited<Retur
           )}
         </CardContent>
       </Card>
+      </TabsContent>
 
+      <TabsContent value="waitlist" className="mt-4">
       <Card className={`border-t-2 ${t.border}`}>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -259,7 +298,9 @@ async function HealthcarePanel({ supabase, tenantId }: { supabase: Awaited<Retur
           )}
         </CardContent>
       </Card>
+      </TabsContent>
 
+      <TabsContent value="refills" className="mt-4">
       <Card className={`border-t-2 ${t.border}`}>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -304,7 +345,9 @@ async function HealthcarePanel({ supabase, tenantId }: { supabase: Awaited<Retur
           )}
         </CardContent>
       </Card>
+      </TabsContent>
 
+      <TabsContent value="insurance" className="mt-4">
       <Card className={`border-t-2 ${t.border}`}>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -347,7 +390,8 @@ async function HealthcarePanel({ supabase, tenantId }: { supabase: Awaited<Retur
           )}
         </CardContent>
       </Card>
-    </div>
+      </TabsContent>
+    </Tabs>
   );
 }
 
@@ -435,8 +479,44 @@ async function RestaurantPanel({ supabase, tenantId }: { supabase: Awaited<Retur
     : null;
 
   return (
-    <div className="grid gap-6 lg:grid-cols-2">
-      <Card className={`border-t-2 ${t.border} lg:col-span-2`}>
+    <div className="space-y-4">
+      {/* At-a-glance strip: the menu is a glanceable stat, not a workflow
+          queue, so it stays visible regardless of which tab is active
+          rather than being buried behind a "Menu" tab. */}
+      <Card className={`border-t-2 ${t.border}`}>
+        <CardContent className="flex items-center justify-between py-4">
+          <div className="flex items-center gap-2">
+            <ClipboardList className={`size-5 ${t.icon}`} />
+            <div>
+              <p className="font-mono text-2xl font-bold leading-tight">{menuCount}</p>
+              <p className="text-xs text-muted-foreground">Menu items on file</p>
+            </div>
+          </div>
+          <div className="text-right">
+            <p className="text-sm text-muted-foreground">Last updated</p>
+            <p className="font-mono text-sm font-medium">{lastMenuUpdate ? formatDateTime(lastMenuUpdate) : "—"}</p>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Tabs defaultValue="reservations">
+        <TabsList variant="line">
+          <TabsTrigger value="reservations" className={t.tab}>
+            <Users className="mr-1.5 size-4" />
+            Reservations
+          </TabsTrigger>
+          <TabsTrigger value="orders" className={t.tab}>
+            <ChefHat className="mr-1.5 size-4" />
+            Recent Orders
+          </TabsTrigger>
+          <TabsTrigger value="catering" className={t.tab}>
+            <Megaphone className="mr-1.5 size-4" />
+            Catering Leads
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="reservations" className="mt-4">
+      <Card className={`border-t-2 ${t.border}`}>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Users className={`size-5 ${t.icon}`} />
@@ -446,7 +526,7 @@ async function RestaurantPanel({ supabase, tenantId }: { supabase: Awaited<Retur
         </CardHeader>
         <CardContent>
           {!reservations?.length ? (
-            <EmptyRow label="No upcoming reservations yet — booked calls will show up here." />
+            <EmptyRow label="No upcoming reservations yet. Booked calls will show up here." />
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
@@ -467,7 +547,7 @@ async function RestaurantPanel({ supabase, tenantId }: { supabase: Awaited<Retur
                           callId={r.call_id}
                           isTest={!!r.call_id && testCallIds.has(r.call_id)}
                           triggerContent={r.guest_name}
-                          title={`${r.guest_name} — party of ${r.party_size}`}
+                          title={`${r.guest_name} (party of ${r.party_size})`}
                           subtitle={`Reservation · ${formatDateTime(r.scheduled_at)}`}
                           fields={fields([
                             ["Guest", r.guest_name],
@@ -495,7 +575,9 @@ async function RestaurantPanel({ supabase, tenantId }: { supabase: Awaited<Retur
           )}
         </CardContent>
       </Card>
+        </TabsContent>
 
+        <TabsContent value="orders" className="mt-4">
       <Card className={`border-t-2 ${t.border}`}>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -551,29 +633,9 @@ async function RestaurantPanel({ supabase, tenantId }: { supabase: Awaited<Retur
           )}
         </CardContent>
       </Card>
+        </TabsContent>
 
-      <div className="space-y-6">
-        <Card className={`border-t-2 ${t.border}`}>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <ClipboardList className={`size-5 ${t.icon}`} />
-              Menu
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="font-mono text-2xl font-bold">{menuCount}</p>
-                <p className="text-xs text-muted-foreground">Menu items on file</p>
-              </div>
-              <div className="text-right">
-                <p className="text-sm text-muted-foreground">Last updated</p>
-                <p className="font-mono text-sm font-medium">{lastMenuUpdate ? formatDateTime(lastMenuUpdate) : "—"}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
+        <TabsContent value="catering" className="mt-4">
         <Card className={`border-t-2 ${t.border}`}>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -623,7 +685,8 @@ async function RestaurantPanel({ supabase, tenantId }: { supabase: Awaited<Retur
             )}
           </CardContent>
         </Card>
-      </div>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
@@ -635,11 +698,11 @@ function fullAddress(listing: { address_line1: string; city: string; state: stri
   return `${listing.address_line1}, ${listing.city}, ${listing.state}`;
 }
 
-/** "$400,000.00 – $650,000.00", or whichever half of the range we have. */
+/** "$400,000.00 to $650,000.00", or whichever half of the range we have. */
 function budgetRange(minCents: number | null, maxCents: number | null): string | null {
   if (minCents == null && maxCents == null) return null;
   if (minCents != null && maxCents != null) {
-    return `${formatMoneyFromCents(minCents)} – ${formatMoneyFromCents(maxCents)}`;
+    return `${formatMoneyFromCents(minCents)} to ${formatMoneyFromCents(maxCents)}`;
   }
   if (maxCents != null) return `Up to ${formatMoneyFromCents(maxCents)}`;
   return `From ${formatMoneyFromCents(minCents)}`;
@@ -741,8 +804,32 @@ async function RealEstatePanel({ supabase, tenantId }: { supabase: Awaited<Retur
   const unitById = new Map((units ?? []).map((u) => [u.id, u]));
 
   return (
-    <div className="grid gap-6 lg:grid-cols-2">
-      <Card className={`border-t-2 ${t.border} lg:col-span-2`}>
+    <Tabs defaultValue="leads">
+      <TabsList variant="line">
+        <TabsTrigger value="leads" className={t.tab}>
+          <Users className="mr-1.5 size-4" />
+          Leads
+        </TabsTrigger>
+        <TabsTrigger value="showings" className={t.tab}>
+          <Eye className="mr-1.5 size-4" />
+          Upcoming Showings
+        </TabsTrigger>
+        <TabsTrigger value="valuations" className={t.tab}>
+          <BadgeDollarSign className="mr-1.5 size-4" />
+          Valuation Requests
+        </TabsTrigger>
+        <TabsTrigger value="listings" className={t.tab}>
+          <Home className="mr-1.5 size-4" />
+          Active Listings
+        </TabsTrigger>
+        <TabsTrigger value="maintenance" className={t.tab}>
+          <Wrench className="mr-1.5 size-4" />
+          Maintenance Requests
+        </TabsTrigger>
+      </TabsList>
+
+      <TabsContent value="leads" className="mt-4">
+      <Card className={`border-t-2 ${t.border}`}>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Users className={`size-5 ${t.icon}`} />
@@ -752,7 +839,7 @@ async function RealEstatePanel({ supabase, tenantId }: { supabase: Awaited<Retur
         </CardHeader>
         <CardContent>
           {!leads?.length ? (
-            <EmptyRow label="No leads yet — calls that capture buyer/seller info will show up here." />
+            <EmptyRow label="No leads yet. Calls that capture buyer/seller info will show up here." />
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
@@ -806,7 +893,9 @@ async function RealEstatePanel({ supabase, tenantId }: { supabase: Awaited<Retur
           )}
         </CardContent>
       </Card>
+      </TabsContent>
 
+      <TabsContent value="showings" className="mt-4">
       <Card className={`border-t-2 ${t.border}`}>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -856,18 +945,20 @@ async function RealEstatePanel({ supabase, tenantId }: { supabase: Awaited<Retur
           )}
         </CardContent>
       </Card>
+      </TabsContent>
 
+      <TabsContent value="valuations" className="mt-4">
       <Card className={`border-t-2 ${t.border}`}>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <BadgeDollarSign className={`size-5 ${t.icon}`} />
             Valuation Requests
           </CardTitle>
-          <CardDescription>Owners asking what their property is worth — call them back to agree a time</CardDescription>
+          <CardDescription>Owners asking what their property is worth. Call them back to agree a time.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
           {!valuations.length ? (
-            <EmptyRow label="No valuation requests yet — calls asking for a home valuation will show up here." />
+            <EmptyRow label="No valuation requests yet. Calls asking for a home valuation will show up here." />
           ) : (
             valuations.map((v) => (
               <div key={v.id} className="flex items-start justify-between gap-3 rounded-lg border p-3">
@@ -895,7 +986,7 @@ async function RealEstatePanel({ supabase, tenantId }: { supabase: Awaited<Retur
                     // appointment isn't one until a human agrees it.
                     [
                       "Visit scheduled",
-                      v.scheduled_at ? formatDateTime(v.scheduled_at) : "Not booked yet — needs a callback",
+                      v.scheduled_at ? formatDateTime(v.scheduled_at) : "Not booked yet, needs a callback",
                     ],
                     [
                       "Estimated value",
@@ -912,8 +1003,9 @@ async function RealEstatePanel({ supabase, tenantId }: { supabase: Awaited<Retur
           )}
         </CardContent>
       </Card>
+      </TabsContent>
 
-      <div className="space-y-6">
+      <TabsContent value="listings" className="mt-4">
         <Card className={`border-t-2 ${t.border}`}>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -937,6 +1029,9 @@ async function RealEstatePanel({ supabase, tenantId }: { supabase: Awaited<Retur
             )}
           </CardContent>
         </Card>
+      </TabsContent>
+
+      <TabsContent value="maintenance" className="mt-4">
 
         <Card className={`border-t-2 ${t.border}`}>
           <CardHeader>
@@ -985,8 +1080,8 @@ async function RealEstatePanel({ supabase, tenantId }: { supabase: Awaited<Retur
             )}
           </CardContent>
         </Card>
-      </div>
-    </div>
+      </TabsContent>
+    </Tabs>
   );
 }
 
@@ -1035,7 +1130,7 @@ export default async function OperationsPage() {
           {meta.label} Operations
         </h1>
         <p className="text-muted-foreground">
-          Real bookings, orders, and outcomes captured by your AI agent — click any item to see its full details.
+          Real bookings, orders, and outcomes captured by your AI agent. Click any item to see its full details.
         </p>
       </div>
 

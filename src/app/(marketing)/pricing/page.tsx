@@ -243,19 +243,11 @@ export default function PricingPage() {
           <div className="mx-auto mt-12 max-w-4xl overflow-x-auto">
             <table className="w-full border-collapse text-sm">
               <thead>
-                <tr className="bg-brand text-brand-foreground">
-                  <th className="rounded-l-lg px-5 py-3.5 text-left font-semibold">
-                    Feature
-                  </th>
-                  <th className="px-4 py-3.5 text-center font-semibold">
-                    Starter
-                  </th>
-                  <th className="px-4 py-3.5 text-center font-semibold">
-                    Growth
-                  </th>
-                  <th className="rounded-r-lg px-4 py-3.5 text-center font-semibold">
-                    Enterprise
-                  </th>
+                <tr className="border-b border-border text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                  <th className="px-5 py-3 font-medium">Feature</th>
+                  <th className="px-4 py-3 text-center font-medium">Starter</th>
+                  <th className="px-4 py-3 text-center font-medium">Growth</th>
+                  <th className="px-4 py-3 text-center font-medium">Enterprise</th>
                 </tr>
               </thead>
               <tbody>
