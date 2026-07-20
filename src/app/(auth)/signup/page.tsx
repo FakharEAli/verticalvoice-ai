@@ -19,7 +19,6 @@ export default function SignupPage() {
   const [fullName, setFullName] = useState('');
   const [agreed, setAgreed] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
   const [nameError, setNameError] = useState('');
   const [emailError, setEmailError] = useState('');
   const [passwordError, setPasswordError] = useState('');
@@ -47,51 +46,14 @@ export default function SignupPage() {
       return;
     }
 
-    // When email confirmation is disabled (auto-confirm), signUp returns a live
-    // session — the user is already signed in. Sending them to a "check your
-    // email" screen for a mail that will never arrive was a dead end; take them
-    // straight into onboarding instead. A full navigation (not router.push) so
-    // the server sees the freshly-set auth cookie and lets them through.
+    // Email verification is disabled (accounts are auto-confirmed), so there is
+    // no link to wait for — the old "check your email" screen was a dead end.
+    // Auto-confirm also signs the user straight in; clear that session so the
+    // next screen is a real sign-in, as requested, rather than a silent skip.
     if (data.session) {
-      window.location.assign('/onboarding');
-      return;
+      await supabase.auth.signOut();
     }
-
-    // No session AND no identities means the email already belongs to a
-    // confirmed account — Supabase obfuscates this to prevent enumeration, so
-    // point them at sign-in rather than promising another verification mail.
-    if (data.user && data.user.identities && data.user.identities.length === 0) {
-      toast.info('You already have an account with this email. Please sign in.');
-      setLoading(false);
-      return;
-    }
-
-    // A real pending-confirmation signup (email confirmation is switched on).
-    setSubmitted(true);
-    setLoading(false);
-  }
-
-  if (submitted) {
-    return (
-      <AuthSplitShell>
-        <div className="text-center">
-          <div className="mx-auto mb-5 flex size-12 items-center justify-center rounded-full bg-success/10 text-success">
-            <CheckIcon className="size-6" />
-          </div>
-          <h1 className="text-2xl font-semibold tracking-tight">Check your email</h1>
-          <p className="mt-2 text-sm text-muted-foreground">
-            We sent a verification link to{' '}
-            <strong className="text-foreground">{email}</strong>. Click the link
-            to verify your account and get started.
-          </p>
-          <Link href="/login">
-            <Button variant="ghost" className="mt-6 h-11">
-              Back to sign in
-            </Button>
-          </Link>
-        </div>
-      </AuthSplitShell>
-    );
+    window.location.assign('/login?registered=1');
   }
 
   return (
@@ -238,20 +200,3 @@ export default function SignupPage() {
   );
 }
 
-function CheckIcon({ className }: { className?: string }) {
-  return (
-    <svg
-      className={className}
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <path d="M20 6 9 17l-5-5" />
-    </svg>
-  );
-}

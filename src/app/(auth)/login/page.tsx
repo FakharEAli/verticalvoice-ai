@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { Suspense, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/database/supabase-client';
 import { Button } from '@/components/ui/button';
@@ -15,8 +15,12 @@ type AuthMode = 'password' | 'magic-link';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  // Set by the signup page after it creates an auto-confirmed account: there is
+  // no verification email, so signup sends the user here to sign in.
+  const justRegistered = searchParams.get('registered') === '1';
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [mode, setMode] = useState<AuthMode>('password');
@@ -122,9 +126,13 @@ export default function LoginPage() {
     <AuthSplitShell>
       <div>
         <header className="mb-8">
-          <h1 className="text-2xl font-semibold tracking-tight">Welcome back</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">
+            {justRegistered ? 'Your account is ready' : 'Welcome back'}
+          </h1>
           <p className="mt-1.5 text-sm text-muted-foreground">
-            Sign in to your account to continue.
+            {justRegistered
+              ? 'Sign in with the email and password you just chose to finish setting up.'
+              : 'Sign in to your account to continue.'}
           </p>
         </header>
 
@@ -247,6 +255,15 @@ export default function LoginPage() {
         </p>
       </div>
     </AuthSplitShell>
+  );
+}
+
+export default function LoginPage() {
+  // useSearchParams requires a Suspense boundary during prerender.
+  return (
+    <Suspense fallback={null}>
+      <LoginForm />
+    </Suspense>
   );
 }
 
