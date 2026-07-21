@@ -42,6 +42,7 @@ interface TestCall {
   has_transcript: boolean;
   tool_run_count: number;
   outcome_type: string | null;
+  failed_reason: string | null;
 }
 
 interface AnalyzeResult {
@@ -592,6 +593,11 @@ export default function TestCenterPage() {
                         {formatTestCallDuration(c.duration_seconds)}
                         {c.outcome_type ? ` · ${c.outcome_type.replace(/_/g, " ")}` : ""}
                       </p>
+                      {c.failed_reason ? (
+                        <p className="mt-0.5 max-w-md text-xs text-amber-600 dark:text-amber-500">
+                          {c.failed_reason}
+                        </p>
+                      ) : null}
                     </div>
                   </div>
                   <div className="flex items-center gap-3 text-xs text-muted-foreground">

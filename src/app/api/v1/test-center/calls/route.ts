@@ -31,7 +31,7 @@ export async function GET() {
 
   const { data: calls, error } = await supabase
     .from("calls")
-    .select("id, status, duration_seconds, started_at, recording_url")
+    .select("id, status, duration_seconds, started_at, recording_url, outbound_context")
     .eq("tenant_id", tenantId)
     .eq("is_test", true)
     .order("started_at", { ascending: false })
@@ -61,16 +61,23 @@ export async function GET() {
   }
   const outcomeByCall = new Map((outcomes ?? []).map((o) => [o.call_id, o.outcome_type]));
 
-  const result = (calls ?? []).map((c) => ({
-    id: c.id,
-    status: c.status,
-    duration_seconds: c.duration_seconds,
-    started_at: c.started_at,
-    has_recording: !!c.recording_url,
-    has_transcript: hasTranscript.has(c.id),
-    tool_run_count: toolRunCounts.get(c.id) ?? 0,
-    outcome_type: outcomeByCall.get(c.id) ?? null,
-  }));
+  const result = (calls ?? []).map((c) => {
+    // Set by the voice webhook when a call couldn't reach the assistant (e.g.
+    // Ultravox subscription/402). Surfacing it turns a mystifying "Failed" row
+    // into an actionable reason.
+    const ctx = c.outbound_context as { failed_reason?: string } | null;
+    return {
+      id: c.id,
+      status: c.status,
+      duration_seconds: c.duration_seconds,
+      started_at: c.started_at,
+      has_recording: !!c.recording_url,
+      has_transcript: hasTranscript.has(c.id),
+      tool_run_count: toolRunCounts.get(c.id) ?? 0,
+      outcome_type: outcomeByCall.get(c.id) ?? null,
+      failed_reason: ctx?.failed_reason ?? null,
+    };
+  });
 
   return NextResponse.json({ data: result });
 }

@@ -180,6 +180,32 @@ export async function reconcileActiveCalls(
     Date.now() - 7 * 24 * 60 * 60 * 1000
   ).toISOString();
 
+  // Fail calls stranded in a non-terminal state that never got an
+  // ultravox_call_id. These bailed before the bridge (e.g. Ultravox 402
+  // "set up your subscription", or a thrown webhook), so the join URL — and
+  // thus the ultravox_call_id — was never written. Every reconcile path below
+  // keys off ultravox_call_id, so without this they sit at 'ringing' forever,
+  // which is exactly what makes the Test Center look like calls "aren't
+  // working". A 2-minute grace window avoids racing a call that is genuinely
+  // still mid-setup.
+  const staleBefore = new Date(Date.now() - 2 * 60 * 1000).toISOString();
+  const staleQuery = supabase
+    .from("calls")
+    .update({
+      status: "failed",
+      ended_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    })
+    .is("ultravox_call_id", null)
+    .in("status", ["ringing", "initiated", "initiating", "in_progress"])
+    .lt("started_at", staleBefore);
+  if (tenantId) staleQuery.eq("tenant_id", tenantId);
+  try {
+    await staleQuery;
+  } catch {
+    // Non-fatal housekeeping — never block the main reconcile sweep.
+  }
+
   const activeQuery = supabase
     .from("calls")
     .select("id, tenant_id, ultravox_call_id, status, recording_url, direction, caller_number, called_number")

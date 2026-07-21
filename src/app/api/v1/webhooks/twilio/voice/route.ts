@@ -20,6 +20,48 @@ function sayAndHangup(message: string) {
   return twiml(`<Response><Say>${message}</Say><Hangup/></Response>`);
 }
 
+/**
+ * Move a call row out of the non-terminal 'ringing' state when the bridge to
+ * Ultravox never completes. Without this, a call that fails before it gets an
+ * ultravox_call_id (e.g. Ultravox returns 402 "set up your subscription") is
+ * stranded at 'ringing' forever: the post-call reconciler only sweeps rows
+ * that already have an ultravox_call_id, so nothing else can finalize it. The
+ * reason is stashed in outbound_context (null for a normal inbound call) so the
+ * Test Center can tell the operator *why* instead of showing an endless spinner.
+ */
+async function markCallFailed(
+  supabase: ReturnType<typeof createAdminClient>,
+  callSid: string,
+  reason: string
+) {
+  try {
+    await supabase
+      .from('calls')
+      .update({
+        status: 'failed',
+        ended_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        outbound_context: { failed_reason: reason },
+      })
+      .eq('provider_call_id', callSid)
+      .in('status', ['ringing', 'initiated', 'initiating', 'in_progress']);
+  } catch (e) {
+    logger.error('twilio-voice-webhook: could not mark call failed', {
+      callSid,
+      error: e instanceof Error ? e.message : String(e),
+    });
+  }
+}
+
+/**
+ * Ultravox answers 402 when the account's included minutes are used up. This is
+ * an account/billing state, not a code fault, so it deserves its own clear
+ * message rather than the generic "technical issue".
+ */
+function isUltravoxSubscriptionError(message: string): boolean {
+  return message.includes('402') || /subscription/i.test(message);
+}
+
 export async function POST(request: NextRequest) {
   const supabase = createAdminClient();
 
@@ -170,6 +212,7 @@ export async function POST(request: NextRequest) {
       logger.error('twilio-voice-webhook: Ultravox call created without joinUrl', {
         ultravoxCallId: ultravoxCall.callId,
       });
+      await markCallFailed(supabase, callSid, 'Assistant did not return a join URL.');
       return sayAndHangup('We could not connect you to our assistant right now. Please try again later.');
     }
 
@@ -193,9 +236,25 @@ export async function POST(request: NextRequest) {
       `<Response><Connect><Stream url="${ultravoxCall.joinUrl}" /></Connect></Response>`
     );
   } catch (error) {
-    logger.error('twilio-voice-webhook: unhandled error', {
-      error: error instanceof Error ? error.message : String(error),
-    });
-    return sayAndHangup('We are experiencing a technical issue. Please try again shortly.');
+    const message = error instanceof Error ? error.message : String(error);
+    logger.error('twilio-voice-webhook: unhandled error', { error: message });
+
+    // The call row (if we got far enough to insert it) is still 'ringing' —
+    // finalize it as failed so it doesn't spin forever in the Test Center, and
+    // record why so the operator can see it was a subscription/billing issue.
+    const subscription = isUltravoxSubscriptionError(message);
+    await markCallFailed(
+      supabase,
+      callSid,
+      subscription
+        ? 'AI calling service needs its subscription set up (Ultravox returned 402).'
+        : `Could not connect the assistant: ${message}`
+    );
+
+    return sayAndHangup(
+      subscription
+        ? 'The A I calling service is not active yet. The account subscription needs to be set up before test calls can connect. Goodbye.'
+        : 'We are experiencing a technical issue. Please try again shortly.'
+    );
   }
 }
